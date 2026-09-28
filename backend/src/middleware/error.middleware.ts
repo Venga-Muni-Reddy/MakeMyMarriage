@@ -5,5 +5,6 @@ export const errorHandler = (err: any, _req: Request, res: Response, _next: Next
   res.status(status).json({
     success: false,
     message: err.message || 'Internal server error',
+    ...(err.errors && { errors: err.errors }),
   });
 };

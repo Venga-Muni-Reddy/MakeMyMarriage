@@ -21,3 +21,22 @@ export class ForbiddenError extends ApiError {
     super(403, message);
   }
 }
+
+export class BadRequestError extends ApiError {
+  constructor(message = 'Bad Request', errors?: any) {
+    super(400, message, errors);
+  }
+}
+
+export class ConflictError extends ApiError {
+  constructor(message = 'Conflict', errors?: any) {
+    super(409, message, errors);
+  }
+}
+
+export class ValidationError extends ApiError {
+  constructor(message = 'Validation failed', errors?: any) {
+    super(422, message, errors);
+  }
+}
+

@@ -1,8 +1,9 @@
 import { createBrowserRouter } from 'react-router-dom';
-import { Navbar } from '../components/layout/Navbar';
 import { DashboardLayout } from '../components/layout/DashboardLayout';
-import { AuthView } from '../features/auth/AuthView';
+import { LoginPage } from '../features/auth/LoginPage';
+import { SignupPage } from '../features/auth/SignupPage';
 import { WeddingView } from '../features/wedding/WeddingView';
+import { HomePage } from '../features/home/HomePage';
 import {
   EventsView,
   GuestsView,
@@ -15,40 +16,15 @@ import {
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: (
-      <div>
-        <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-24 text-center">
-          <h1 className="font-serif text-5xl font-bold tracking-tight text-stone-900 mb-6">
-            MakeMy<span className="text-gold-600">Marriage</span>
-          </h1>
-          <p className="text-lg text-stone-600 max-w-2xl mx-auto mb-8">
-            The complete digital wedding ecosystem. Invitations, RSVPs, photo gallery, guest QR check-in, and real-time wedding coordination.
-          </p>
-          <div className="inline-block bg-gold-100 text-gold-800 text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wider">
-            Scaffold Ready
-          </div>
-        </div>
-      </div>
-    ),
+    element: <HomePage />,
   },
   {
     path: '/login',
-    element: (
-      <div>
-        <Navbar />
-        <AuthView mode="login" />
-      </div>
-    ),
+    element: <LoginPage />,
   },
   {
     path: '/signup',
-    element: (
-      <div>
-        <Navbar />
-        <AuthView mode="signup" />
-      </div>
-    ),
+    element: <SignupPage />,
   },
   {
     path: '/dashboard/:weddingId?',
