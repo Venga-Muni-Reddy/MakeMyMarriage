@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { router } from '../routes';
 
 import { AuthProvider } from '../context/AuthContext';
+import { WeddingProvider } from '../context/WeddingContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,7 +19,9 @@ export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <WeddingProvider>
+          <RouterProvider router={router} />
+        </WeddingProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

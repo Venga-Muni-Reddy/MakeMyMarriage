@@ -3,11 +3,14 @@ import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { LoginPage } from '../features/auth/LoginPage';
 import { SignupPage } from '../features/auth/SignupPage';
 import { WeddingView } from '../features/wedding/WeddingView';
+import { WeddingSetupPage } from '../features/wedding/WeddingSetupPage';
 import { HomePage } from '../features/home/HomePage';
+import { EventsView } from '../features/events/EventsView';
+import { GuestsView } from '../features/guests/GuestsView';
+import { InvitationsView } from '../features/invitations/InvitationsView';
+import { PublicInvitationView } from '../features/invitations/PublicInvitationView';
+import { SettingsView } from '../features/settings/SettingsView';
 import {
-  EventsView,
-  GuestsView,
-  InvitationsView,
   TasksView,
   GalleryView,
   CheckinView,
@@ -27,6 +30,14 @@ export const router = createBrowserRouter([
     element: <SignupPage />,
   },
   {
+    path: '/setup-wedding',
+    element: <WeddingSetupPage />,
+  },
+  {
+    path: '/weddings/new',
+    element: <WeddingSetupPage />,
+  },
+  {
     path: '/dashboard/:weddingId?',
     element: <DashboardLayout />,
     children: [
@@ -34,9 +45,13 @@ export const router = createBrowserRouter([
       { path: 'events', element: <EventsView /> },
       { path: 'guests', element: <GuestsView /> },
       { path: 'invitations', element: <InvitationsView /> },
+      { path: 'invites', element: <InvitationsView /> },
       { path: 'tasks', element: <TasksView /> },
       { path: 'gallery', element: <GalleryView /> },
       { path: 'checkin', element: <CheckinView /> },
+      { path: 'settings', element: <SettingsView /> },
+      { path: 'roles', element: <SettingsView /> },
+      { path: 'team', element: <SettingsView /> },
       {
         path: 'website',
         element: (
@@ -59,11 +74,10 @@ export const router = createBrowserRouter([
   },
   {
     path: '/invite/:token',
-    element: (
-      <div className="p-12 text-center">
-        <h1 className="font-serif text-3xl font-bold">Guest Digital Invitation</h1>
-        <p className="text-stone-500 mt-2">[Token-Based Guest Experience Scaffolded]</p>
-      </div>
-    ),
+    element: <PublicInvitationView />,
+  },
+  {
+    path: '/w/tok_:token',
+    element: <PublicInvitationView />,
   },
 ]);

@@ -20,6 +20,8 @@ import {
   ChevronRight,
   MessageCircle,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { useWedding } from '../../context/WeddingContext';
 
 interface CountdownTime {
   days: number;
@@ -29,9 +31,18 @@ interface CountdownTime {
 }
 
 export const WeddingView: React.FC = () => {
+  const { user } = useAuth();
+  const { currentWedding } = useWedding();
+
+  const partner1 = currentWedding?.settings?.partner1Name || 'Ananya';
+  const partner2 = currentWedding?.settings?.partner2Name || 'Rahul';
+  const coupleNames = `${partner1} & ${partner2}`;
+  const venue = currentWedding?.settings?.primaryVenueName || 'The Leela Palace, Udaipur';
+  const weddingSlug = currentWedding?.slug || 'ananya-rahul';
+
   // 1. Live Countdown State
   const [timeLeft, setTimeLeft] = useState<CountdownTime>({
-    days: 12,
+    days: 60,
     hours: 14,
     minutes: 32,
     seconds: 18,
@@ -53,7 +64,7 @@ export const WeddingView: React.FC = () => {
   }, []);
 
   const handleCopy = () => {
-    navigator.clipboard?.writeText(window.location.origin + '/w/ananya-rahul');
+    navigator.clipboard?.writeText(window.location.origin + `/w/${weddingSlug}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -82,10 +93,10 @@ export const WeddingView: React.FC = () => {
               <span className="text-xs text-secondary font-semibold">Auspicious Day</span>
             </div>
             <h1 className="font-serif text-2xl sm:text-3xl font-bold text-on-surface">
-              Namaste Radhika, Maharani Suite
+              Namaste {user?.name || 'Royal Host'}, Maharani Suite
             </h1>
             <p className="text-xs text-on-surface-variant mt-0.5">
-              Royal Wedding Concierge orchestration for <strong className="text-on-surface">Ananya & Rahul</strong> • City Palace, Udaipur
+              Royal Wedding Concierge orchestration for <strong className="text-on-surface">{coupleNames}</strong> • {venue}
             </p>
           </div>
         </div>
@@ -116,19 +127,45 @@ export const WeddingView: React.FC = () => {
             className="flex items-center space-x-1.5 px-4 py-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-xs font-semibold text-on-surface transition-all shadow-xs"
           >
             {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4 text-primary" />}
-            <span>{copied ? 'Link Copied!' : '/w/ananya-rahul'}</span>
+            <span>{copied ? 'Link Copied!' : `/w/${weddingSlug}`}</span>
           </button>
 
-          {/* Add Ceremony CTA */}
+          {/* Setup / Add Ceremony CTA */}
           <Link
-            to="/dashboard/events"
+            to="/setup-wedding"
             className="flex items-center space-x-1.5 px-4 py-2.5 rounded-xl bg-secondary text-white text-xs font-bold uppercase tracking-wider shadow-sm hover:bg-[#881337] transition-all"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Add Ceremony / VIP</span>
+            <span>Setup New Folio</span>
           </Link>
         </div>
       </section>
+
+      {/* No Active Wedding Workspace Banner */}
+      {!currentWedding && (
+        <div className="p-5 rounded-2xl bg-gradient-to-r from-primary-fixed/40 via-surface-container to-secondary-fixed/20 border border-primary/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-primary shadow-sm border border-primary/20">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-serif font-bold text-sm sm:text-base text-on-surface">
+                Inaugurate Your Royal Wedding Workspace
+              </h3>
+              <p className="text-xs text-on-surface-variant mt-0.5">
+                Establish your digital royal enclave to customize guest itineraries, RSVP cards, and auspicious ceremony schedules.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/setup-wedding"
+            className="px-5 py-2.5 rounded-xl bg-primary text-on-primary text-xs uppercase font-bold tracking-wider hover:bg-primary/90 transition-all flex items-center gap-1.5 shadow-sm shrink-0"
+          >
+            <span>Inaugurate Folio</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 2. IMPERIAL KPI METRIC RAIL (4 LUXURY CARDS) */}

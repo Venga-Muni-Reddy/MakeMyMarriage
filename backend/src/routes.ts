@@ -3,7 +3,7 @@ import { authRouter } from './modules/auth/routes';
 import { weddingRouter } from './modules/weddings/routes';
 import { eventRouter } from './modules/events/routes';
 import { guestRouter } from './modules/guests/routes';
-import { invitationRouter } from './modules/invitations/routes';
+import { invitationRouter, publicInvitationRouter } from './modules/invitations/routes';
 import { rsvpRouter } from './modules/rsvp/routes';
 import { taskRouter } from './modules/tasks/routes';
 import { mediaRouter } from './modules/media/routes';
@@ -39,6 +39,7 @@ apiRouter.use('/weddings/:weddingId/livestreams', livestreamRouter);
 apiRouter.use('/weddings/:weddingId/website', websiteRouter);
 apiRouter.use('/weddings/:weddingId/notifications', notificationRouter);
 apiRouter.use('/weddings/:weddingId/activities', activityRouter);
+apiRouter.use('/public/invitations', publicInvitationRouter);
 
 // Realtime SSE stream endpoint (/api/v1/weddings/:weddingId/events/stream)
 apiRouter.get('/weddings/:weddingId/events/stream', (req, res) => {

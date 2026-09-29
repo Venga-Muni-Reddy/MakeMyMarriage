@@ -19,14 +19,20 @@ Following **Section 116 (Recommended Build Order)** of the System Design Archite
 | **0.7** | **Royal Sign Up Suite (Stitch Design)** | `frontend/auth` | ✅ **COMPLETED** | Scaffold |
 | **0.8** | **Imperial Command Dashboard (Stitch Design)** | `frontend/wedding` | ✅ **COMPLETED** | Scaffold |
 | **1** | **User Authentication & Sessions** | `auth` + `users` | ✅ **COMPLETED** | Scaffold |
-| **2** | **Wedding Management & Tenancy** | `weddings` | 🟡 **NEXT UP (Awaiting Approval)** | Auth |
+| **2** | **Wedding Management & Tenancy** | `weddings` | ✅ **COMPLETED** | Auth |
+| **3** | **Events & Sacred Ceremonies** | `events` + `venues` | ✅ **COMPLETED** | Weddings |
+| **4** | **Guest Registry & Dietary Preferences** | `guests` + `groups` | ✅ **COMPLETED** | Events |
+| **5** | **Digital Invitations & Access Tokens** | `invitations` + `access` | ✅ **COMPLETED** | Guests |
+| **6** | **RSVP Collection & Attendance Tracking** | `rsvp` + `dietary` | 🟡 **NEXT UP (Awaiting Approval)** | Invitations |
 
 ---
 
-## 🎯 Next Feature to Build: Feature 2 — Wedding Management & Tenancy
+## 🎯 Next Feature to Build: Feature 6 — RSVP Collection & Attendance Tracking
 
-### Why Wedding Management Next?
-In our system architecture, the **Wedding is the central tenant boundary**. Events, Guests, Invitations, RSVPs, Photo Vault, and Check-in desks all belong to a Wedding. After authenticating users in Feature 1, Feature 2 allows couples and hosts to create, configure, update, and manage their wedding workspace.
+### Why RSVP Collection Next?
+With royal digital invitations minted, cryptographic zero-password access tokens issued, and multi-channel WhatsApp passes dispatched (Feature 5), guests can now open their personalized digital wedding passes. The immediate next natural progression according to Section 116 of our architecture is **RSVP Collection & Attendance Tracking** (Feature 6).
+
+This empowers invited guests to RSVP per ceremony, specify plus-one details and dietary/allergy requirements, and allows couples to monitor real-time headcount confirmations via live charts and telemetry.
 
 
 ---
@@ -78,9 +84,13 @@ In our system architecture, the **Wedding is the central tenant boundary**. Even
 | Date | Milestone | Details |
 |---|---|---|
 | **2026-09-28** | **Project Scaffold Completed** | Initialized root monorepo, Prisma schema with 21 models, Express backend skeleton, React + Vite frontend skeleton, and aligned SSE real-time architecture across documents. |
-| **2026-09-28** | **Roadmap & Status Document Created** | Established build order and detailed plan for Feature 1 (Authentication). |
+| **2026-09-28** | **Feature 1: User Authentication** | Full user registration, session management, secure HTTP cookies, and protected routing. |
+| **2026-09-29** | **Feature 2: Wedding Management** | Multi-wedding onboarding, tenancy isolation, roles, and wedding switching. |
+| **2026-09-29** | **Feature 3: Events & Ceremonies** | Multi-ceremony itinerary, calendar timelines, venues, and conflict checking. |
+| **2026-09-29** | **Feature 4: Guest Registry & Seating** | Household groupings, Mandap seating tags, dietary preferences, and archive/unarchive. |
+| **2026-09-30** | **Feature 5: Digital Invitations & Tokens** | Royal Invitation Studio, 4 Heritage Themes, zero-password cryptographic magic tokens (`tok_...`), WhatsApp pass dispatch, live mobile simulator, and public guest unboxing page (`/invite/:token`). |
 
 ---
 
 > [!NOTE]  
-> **Status:** Waiting for user approval before beginning Feature 1 implementation.
+> **Status:** Feature 5 completed and verified. Awaiting user approval to commence Feature 6 (RSVP & Attendance Tracking).

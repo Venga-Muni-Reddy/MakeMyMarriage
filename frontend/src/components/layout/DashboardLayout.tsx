@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation, useParams } from 'react-router-dom';
+import { Outlet, Link, useLocation, useParams, useNavigate } from 'react-router-dom';
 import {
   Heart,
   Calendar,
@@ -22,8 +22,13 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { useWedding } from '../../context/WeddingContext';
 
 export const DashboardLayout: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const { currentWedding } = useWedding();
   const { weddingId } = useParams<{ weddingId: string }>();
   const location = useLocation();
   const base = weddingId ? `/dashboard/${weddingId}` : '/dashboard';
@@ -36,22 +41,36 @@ export const DashboardLayout: React.FC = () => {
     setMobileMenuOpen(false);
   }, [location.pathname]);
 
+  const weddingSlug = currentWedding?.slug || 'ananya-rahul';
+  const coupleTitle = currentWedding?.settings?.partner1Name && currentWedding?.settings?.partner2Name
+    ? `${currentWedding.settings.partner1Name} & ${currentWedding.settings.partner2Name}`
+    : currentWedding?.name || 'Ananya & Rahul';
+
+  const venueInfo = currentWedding?.settings?.primaryVenueName
+    ? `${currentWedding.settings.primaryVenueName} • ${currentWedding.settings.displayDate || 'Auspicious Muhurtham'}`
+    : 'City Palace, Udaipur • Dec 18–20';
+
   const navItems = [
     { label: 'Overview', path: `${base}`, icon: Heart, exact: true },
     { label: 'Ceremonies', path: `${base}/events`, icon: Calendar },
-    { label: 'Guests & RSVPs', path: `${base}/guests`, icon: Users, badge: '342' },
-    { label: 'Digital Invites', path: `${base}/invitations`, icon: Mail },
+    { label: 'Guests & RSVPs', path: `${base}/guests`, icon: Users },
+    { label: 'Digital Invites', path: `${base}/invitations`, icon: Mail, badge: 'Ready' },
     { label: 'Checklist & Tasks', path: `${base}/tasks`, icon: CheckSquare },
     { label: 'Photo Vault', path: `${base}/gallery`, icon: Camera, badge: '248' },
     { label: 'VIP QR Check-in', path: `${base}/checkin`, icon: QrCode },
-    { label: 'Public Website', path: `/w/ananya-rahul`, icon: Globe, external: false },
-    { label: 'Settings', path: `${base}/website`, icon: Settings },
+    { label: 'Public Website', path: `/w/${weddingSlug}`, icon: Globe, external: false },
+    { label: 'Settings & Roles', path: `${base}/settings`, icon: Settings },
   ];
 
   const handleCopyLink = () => {
-    navigator.clipboard?.writeText(window.location.origin + '/w/ananya-rahul');
+    navigator.clipboard?.writeText(window.location.origin + `/w/${weddingSlug}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSignOut = async () => {
+    await logout();
+    navigate('/login');
   };
 
   return (
@@ -86,10 +105,10 @@ export const DashboardLayout: React.FC = () => {
               </span>
               <Sparkles className="w-3.5 h-3.5 text-primary" />
             </div>
-            <h3 className="font-serif text-base font-bold text-on-surface">Ananya & Rahul</h3>
+            <h3 className="font-serif text-base font-bold text-on-surface">{coupleTitle}</h3>
             <div className="flex items-center space-x-1.5 mt-1 text-xs text-on-surface-variant">
               <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="truncate">City Palace, Udaipur • Dec 18–20</span>
+              <span className="truncate">{venueInfo}</span>
             </div>
           </div>
 
@@ -135,16 +154,24 @@ export const DashboardLayout: React.FC = () => {
           <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
             <div className="flex items-center space-x-2.5">
               <div className="w-8 h-8 rounded-full bg-secondary text-white flex items-center justify-center font-serif text-xs font-bold shadow-xs">
-                RM
+                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div className="flex flex-col">
-                <span className="text-xs font-bold text-on-surface leading-tight">Radhika Mehta</span>
-                <span className="text-[10px] text-primary font-semibold">Chief Concierge (Host)</span>
+                <span className="text-xs font-bold text-on-surface leading-tight">
+                  {user?.name || 'Workspace Host'}
+                </span>
+                <span className="text-[10px] text-primary font-semibold">
+                  {currentWedding?.userRole || 'Wedding Host'}
+                </span>
               </div>
             </div>
-            <Link to="/login" title="Sign out" className="text-on-surface-variant hover:text-secondary transition-colors p-1">
+            <button
+              onClick={handleSignOut}
+              title="Sign out"
+              className="text-on-surface-variant hover:text-secondary transition-colors p-1"
+            >
               <LogOut className="w-4 h-4" />
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
