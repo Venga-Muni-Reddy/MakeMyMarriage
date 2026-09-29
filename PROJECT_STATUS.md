@@ -1,9 +1,9 @@
 # MakeMyMarriage — Project Status & Feature Roadmap
 
 **Version:** 1.0  
-**Current Phase:** Feature 1 (Authentication) Complete → Ready for Feature 2 (Wedding Management)  
+**Current Phase:** Feature 5 Complete (Invites & Tokens) + Logo & Auth UX Polished → Commencing Feature 6 (RSVP & Attendance Tracking)  
 **Architecture:** Modular Monolith (PostgreSQL + Prisma + Express + React + Tailwind + SSE)  
-**Last Updated:** 2026-09-28  
+**Last Updated:** 2026-09-30  
 
 ---
 
@@ -93,4 +93,4 @@ This empowers invited guests to RSVP per ceremony, specify plus-one details and 
 ---
 
 > [!NOTE]  
-> **Status:** Feature 5 completed and verified. Awaiting user approval to commence Feature 6 (RSVP & Attendance Tracking).
+> **Status:** Features 1–5 completed, verified, and pushed to remote. Logo navigation and authenticated homepage state are live. Now proceeding with Feature 6 (RSVP Collection & Attendance Tracking).
