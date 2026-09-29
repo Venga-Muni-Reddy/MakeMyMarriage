@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { useWedding } from '../../context/WeddingContext';
 import {
   Heart,
   Calendar,
@@ -28,6 +30,10 @@ interface CountdownTime {
 }
 
 export const HomePage: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
+  const { currentWedding } = useWedding();
+  const dashboardUrl = currentWedding?.id ? `/dashboard/${currentWedding.id}` : '/dashboard';
+
   // 1. Live Countdown Timer State (Targeting a celebratory wedding date)
   const [timeLeft, setTimeLeft] = useState<CountdownTime>({
     days: 12,
@@ -193,19 +199,36 @@ export const HomePage: React.FC = () => {
               )}
             </div>
 
-            <Link
-              to="/login"
-              className="text-sm font-semibold text-on-surface-variant hover:text-on-surface px-3 py-2 transition-colors"
-            >
-              Log In
-            </Link>
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-3">
+                <span className="hidden sm:inline-block text-xs font-semibold text-on-surface">
+                  Namaste, {user?.name?.split(' ')[0] || user?.name || 'Friend'}
+                </span>
+                <Link
+                  to={dashboardUrl}
+                  className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-lg bg-primary text-white font-semibold text-xs sm:text-sm shadow-sm hover:bg-primary/90 transition-all"
+                >
+                  <span>Go to Dashboard</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-sm font-semibold text-on-surface-variant hover:text-on-surface px-3 py-2 transition-colors"
+                >
+                  Log In
+                </Link>
 
-            <Link
-              to="/signup"
-              className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary-container text-on-primary-container font-semibold text-sm shadow-sm hover:bg-[#a67933] transition-all"
-            >
-              Create Your Wedding
-            </Link>
+                <Link
+                  to="/signup"
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary-container text-on-primary-container font-semibold text-sm shadow-sm hover:bg-[#a67933] transition-all"
+                >
+                  Create Your Wedding
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -243,13 +266,23 @@ export const HomePage: React.FC = () => {
 
                 {/* Action Buttons */}
                 <div className="flex flex-wrap items-center gap-4 mb-8">
-                  <Link
-                    to="/signup"
-                    className="inline-flex items-center space-x-2 px-6 py-3 rounded-lg bg-secondary text-white font-semibold text-sm shadow-md hover:bg-[#881337] transition-all hover:shadow-lg"
-                  >
-                    <span>Start Planning Free</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
+                  {isAuthenticated ? (
+                    <Link
+                      to={dashboardUrl}
+                      className="inline-flex items-center space-x-2 px-6 py-3 rounded-lg bg-secondary text-white font-semibold text-sm shadow-md hover:bg-[#881337] transition-all hover:shadow-lg"
+                    >
+                      <span>Continue to Dashboard</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  ) : (
+                    <Link
+                      to="/signup"
+                      className="inline-flex items-center space-x-2 px-6 py-3 rounded-lg bg-secondary text-white font-semibold text-sm shadow-md hover:bg-[#881337] transition-all hover:shadow-lg"
+                    >
+                      <span>Start Planning Free</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  )}
                   <a
                     href="#preview"
                     className="inline-flex items-center space-x-2 px-5 py-3 rounded-lg bg-surface-container-low text-on-surface font-semibold text-sm shadow-sm hover:bg-surface-container border border-outline-variant/30 transition-all"
@@ -820,12 +853,22 @@ export const HomePage: React.FC = () => {
               </p>
 
               <div className="flex flex-col sm:flex-row items-center gap-4">
-                <Link
-                  to="/signup"
-                  className="px-8 py-3.5 rounded-xl bg-primary-container text-on-primary-container font-bold text-sm shadow-xl hover:bg-[#a67933] transition-all hover:scale-105"
-                >
-                  Create Your Wedding — It's Free
-                </Link>
+                {isAuthenticated ? (
+                  <Link
+                    to={dashboardUrl}
+                    className="px-8 py-3.5 rounded-xl bg-primary-container text-on-primary-container font-bold text-sm shadow-xl hover:bg-[#a67933] transition-all hover:scale-105 inline-flex items-center space-x-2"
+                  >
+                    <span>Open Royal Dashboard</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <Link
+                    to="/signup"
+                    className="px-8 py-3.5 rounded-xl bg-primary-container text-on-primary-container font-bold text-sm shadow-xl hover:bg-[#a67933] transition-all hover:scale-105"
+                  >
+                    Create Your Wedding — It's Free
+                  </Link>
+                )}
                 <a
                   href="#preview"
                   className="px-6 py-3.5 rounded-xl bg-white/10 backdrop-blur-md text-white font-semibold text-sm hover:bg-white/20 border border-white/20 transition-all"

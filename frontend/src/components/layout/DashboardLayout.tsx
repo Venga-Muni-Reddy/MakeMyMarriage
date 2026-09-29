@@ -82,7 +82,7 @@ export const DashboardLayout: React.FC = () => {
         <div className="flex flex-col flex-1 overflow-y-auto">
           {/* Brand Header */}
           <div className="p-6 flex items-center space-x-3 border-b border-outline-variant/30">
-            <Link to="/" className="flex items-center space-x-2.5">
+            <Link to={base} className="flex items-center space-x-2.5">
               <div className="w-9 h-9 rounded-full bg-primary-fixed flex items-center justify-center text-primary shadow-sm border border-primary-container/30">
                 <Heart className="w-4 h-4 fill-primary text-primary" />
               </div>
@@ -180,7 +180,7 @@ export const DashboardLayout: React.FC = () => {
       {/* 2. TOP MOBILE HEADER */}
       {/* ========================================================================= */}
       <header className="lg:hidden w-full bg-surface-container-lowest border-b border-outline-variant/40 px-4 py-3 flex items-center justify-between sticky top-0 z-40">
-        <Link to="/" className="flex items-center space-x-2">
+        <Link to={base} className="flex items-center space-x-2">
           <div className="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-primary">
             <Heart className="w-4 h-4 fill-primary" />
           </div>
