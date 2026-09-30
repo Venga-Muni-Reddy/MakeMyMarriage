@@ -260,15 +260,32 @@ export const invitationRepository = {
       },
     });
 
-    // Fallback: search by metadata.magicToken if newly minted
+    // Fallback: search by metadata.magicToken or metadata.qrPassCode (e.g. MMM-OAPW8)
     if (!access) {
+      const cleanToken = token.trim();
       const guest = await prisma.guest.findFirst({
         where: {
           deletedAt: null,
-          metadata: {
-            path: ['magicToken'],
-            equals: token,
-          },
+          OR: [
+            {
+              metadata: {
+                path: ['magicToken'],
+                equals: cleanToken,
+              },
+            },
+            {
+              metadata: {
+                path: ['qrPassCode'],
+                equals: cleanToken,
+              },
+            },
+            {
+              metadata: {
+                path: ['qrPassCode'],
+                equals: cleanToken.toUpperCase(),
+              },
+            },
+          ],
         },
         include: {
           invitations: {
@@ -316,7 +333,7 @@ export const invitationRepository = {
 
     // Update opened timestamp and status
     const now = new Date();
-    await Promise.all([
+    const updateOps: Promise<any>[] = [
       prisma.invitation.update({
         where: { id: inv.id },
         data: {
@@ -324,11 +341,18 @@ export const invitationRepository = {
           status: inv.status === 'DRAFT' || inv.status === 'QUEUED' || inv.status === 'SENT' ? 'OPENED' : inv.status,
         },
       }),
-      prisma.invitationAccess.update({
-        where: { id: access.id },
-        data: { lastUsedAt: now },
-      }),
-    ]);
+    ];
+
+    if (access.id && inv.access) {
+      updateOps.push(
+        prisma.invitationAccess.update({
+          where: { id: access.id },
+          data: { lastUsedAt: now },
+        })
+      );
+    }
+
+    await Promise.all(updateOps);
 
     // Studio Settings from wedding.settings
     const settings = ((wedding.settings as any)?.invitationStudio as InvitationStudioSettings) || DEFAULT_STUDIO_SETTINGS;
