@@ -73,7 +73,7 @@ export const DashboardLayout: React.FC = () => {
   const weddingSlug = currentWedding?.slug || 'ananya-rahul';
   const coupleTitle = currentWedding?.settings?.partner1Name && currentWedding?.settings?.partner2Name
     ? `${currentWedding.settings.partner1Name} & ${currentWedding.settings.partner2Name}`
-    : currentWedding?.name || 'Ananya & Rahul';
+    : currentWedding?.name?.replace(/^The Royal Union of /i, '') || 'Ananya & Rahul';
 
   const venueInfo = currentWedding?.settings?.primaryVenueName
     ? `${currentWedding.settings.primaryVenueName} • ${currentWedding.settings.displayDate || 'Auspicious Muhurtham'}`
@@ -135,41 +135,39 @@ export const DashboardLayout: React.FC = () => {
           <div ref={switcherRef} className="relative m-4">
             <div
               onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
-              className="p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/40 shadow-sm hover:border-primary/50 transition-all cursor-pointer group"
+              className="p-3.5 rounded-2xl bg-surface-container-lowest border border-outline-variant/40 shadow-xs hover:border-primary/50 transition-all cursor-pointer group"
             >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] uppercase font-bold tracking-widest text-secondary flex items-center gap-1.5">
-                  <span>Ceremony Context</span>
-                  {weddings.length > 1 && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-primary/10 text-primary text-[9px] font-bold">
-                      {weddings.length} Workspaces
-                    </span>
-                  )}
+              {/* Top Row: Context Label + Switch Badge */}
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-secondary">
+                  Active Workspace
                 </span>
-                <div className="flex items-center gap-1 text-on-surface-variant group-hover:text-primary transition-colors">
-                  <span className="text-[10px] font-semibold hidden group-hover:inline">Switch</span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                      isSwitcherOpen ? 'rotate-180 text-primary' : ''
-                    }`}
-                  />
-                </div>
+                {weddings.length > 1 ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-[10px] group-hover:bg-primary group-hover:text-white transition-all shadow-2xs">
+                    <span>Switch ({weddings.length})</span>
+                    <ChevronDown
+                      className={`w-3 h-3 transition-transform duration-200 ${
+                        isSwitcherOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </span>
+                ) : (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                )}
               </div>
 
-              <h3 className="font-serif text-base font-bold text-on-surface group-hover:text-primary transition-colors truncate">
+              {/* Couple Name */}
+              <h3 className="font-serif text-sm font-bold text-on-surface group-hover:text-primary transition-colors truncate">
                 {coupleTitle}
               </h3>
 
-              <div className="flex items-center justify-between mt-1 text-xs text-on-surface-variant">
-                <div className="flex items-center space-x-1.5 truncate">
-                  <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span className="truncate">{venueInfo}</span>
+              {/* Bottom Row: Venue + Role Badge */}
+              <div className="mt-2 pt-2 border-t border-outline-variant/20 flex items-center justify-between text-[10px]">
+                <div className="flex items-center space-x-1 text-on-surface-variant truncate max-w-[125px]">
+                  <MapPin className="w-3 h-3 text-primary shrink-0" />
+                  <span className="truncate">{venueInfo.split('•')[0].trim()}</span>
                 </div>
-              </div>
-
-              <div className="mt-2.5 pt-2 border-t border-outline-variant/20 flex items-center justify-between text-[11px]">
-                <span className="text-on-surface-variant">Your Authority:</span>
-                <span className="inline-flex items-center gap-1 font-bold text-primary">
+                <span className="inline-flex items-center gap-1 font-bold text-primary shrink-0">
                   {currentRole === 'OWNER' ? (
                     <Crown className="w-3 h-3 text-amber-600" />
                   ) : (
@@ -202,19 +200,19 @@ export const DashboardLayout: React.FC = () => {
                     const wTitle =
                       w.settings?.partner1Name && w.settings?.partner2Name
                         ? `${w.settings.partner1Name} & ${w.settings.partner2Name}`
-                        : w.name;
+                        : w.name?.replace(/^The Royal Union of /i, '') || w.name;
 
                     return (
                       <div
                         key={w.id}
                         onClick={() => handleSwitchWedding(w.id)}
-                        className={`p-3 rounded-xl cursor-pointer transition-all flex items-center justify-between ${
+                        className={`p-2.5 rounded-xl cursor-pointer transition-all flex items-center justify-between ${
                           isSelected
                             ? 'bg-primary-fixed/30 border border-primary/20'
                             : 'hover:bg-surface-container-low'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 truncate">
+                        <div className="flex items-center gap-2 truncate">
                           <div
                             className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
                               isSelected
@@ -359,6 +357,42 @@ export const DashboardLayout: React.FC = () => {
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Mobile Workspace Switcher */}
+              {weddings.length > 1 && (
+                <div className="p-3 rounded-xl bg-surface-container border border-outline-variant/30 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-secondary">
+                    <span>Workspaces</span>
+                    <span className="text-primary">{weddings.length} Active</span>
+                  </div>
+                  <div className="space-y-1 max-h-36 overflow-y-auto">
+                    {weddings.map((w) => {
+                      const isSelected = w.id === currentWedding?.id;
+                      const wTitle =
+                        w.settings?.partner1Name && w.settings?.partner2Name
+                          ? `${w.settings.partner1Name} & ${w.settings.partner2Name}`
+                          : w.name?.replace(/^The Royal Union of /i, '') || w.name;
+                      return (
+                        <div
+                          key={w.id}
+                          onClick={() => {
+                            handleSwitchWedding(w.id);
+                            setMobileMenuOpen(false);
+                          }}
+                          className={`p-2 rounded-lg text-xs cursor-pointer flex items-center justify-between ${
+                            isSelected
+                              ? 'bg-primary text-white font-bold'
+                              : 'text-on-surface hover:bg-surface-container-high'
+                          }`}
+                        >
+                          <span className="truncate">{wTitle}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <nav className="space-y-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;

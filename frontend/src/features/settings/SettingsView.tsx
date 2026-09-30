@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWedding } from '../../context/WeddingContext';
 import { useAuth } from '../../context/AuthContext';
 import { weddingService, WeddingMemberItem } from '../../services/wedding.service';
@@ -10,10 +11,13 @@ import {
   Sparkles,
   Building,
   Key,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 
 export const SettingsView: React.FC = () => {
-  const { currentWedding } = useWedding();
+  const navigate = useNavigate();
+  const { currentWedding, refreshWeddings } = useWedding();
   const { user: currentUser } = useAuth();
   const weddingId = currentWedding?.id;
 
@@ -23,6 +27,11 @@ export const SettingsView: React.FC = () => {
   const [targetRole, setTargetRole] = useState<'ORGANIZER' | 'COLLABORATOR' | 'VIEWER'>('ORGANIZER');
   const [isAssigning, setIsAssigning] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Deletion modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -82,6 +91,28 @@ export const SettingsView: React.FC = () => {
 
   const currentMemberRecord = members.find((m) => m.userId === currentUser?.id);
   const isOwner = currentMemberRecord?.role?.name === 'OWNER' || currentWedding?.ownerId === currentUser?.id;
+
+  const handleDeleteWedding = async () => {
+    if (!weddingId || !isOwner) return;
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
+      showToast('Please type DELETE to confirm workspace destruction.');
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await weddingService.deleteWedding(weddingId);
+      showToast('Royal wedding workspace has been successfully deleted.');
+      setIsDeleteModalOpen(false);
+      await refreshWeddings();
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.response?.data?.message || err.message || 'Failed to delete wedding workspace');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const roleDescriptions: Record<string, { label: string; badge: string; desc: string }> = {
     OWNER: {
@@ -382,6 +413,112 @@ export const SettingsView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* ========================================================================= */}
+      {/* DANGER ZONE (OWNER ONLY) */}
+      {/* ========================================================================= */}
+      <div className="p-7 rounded-2xl bg-rose-50/50 border border-rose-200 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-rose-200/60">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-headline-md font-bold text-lg text-rose-950">
+                Danger Zone: Workspace Destruction
+              </h2>
+              <p className="text-xs text-rose-800/80">
+                Permanently decommission this wedding workspace, guest rolls, ceremonies, and invitations.
+              </p>
+            </div>
+          </div>
+
+          {isOwner ? (
+            <button
+              onClick={() => {
+                setDeleteConfirmText('');
+                setIsDeleteModalOpen(true);
+              }}
+              className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-2 shrink-0 self-start sm:self-auto active:scale-95"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete Wedding Workspace</span>
+            </button>
+          ) : (
+            <span className="text-xs text-rose-800 font-medium px-3 py-1.5 rounded-lg bg-rose-100/60 border border-rose-200/50">
+              Restricted to Sovereign Owner
+            </span>
+          )}
+        </div>
+
+        <div className="text-xs text-rose-900/70 leading-relaxed">
+          <p>
+            <strong>Note on data lifecycle:</strong> Deleting this wedding will immediately remove it from all collaborator rosters and revoke all digital invitations and QR passes. This action cannot be reversed.
+          </p>
+        </div>
+      </div>
+
+      {/* Two-Step Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-surface-container-lowest rounded-3xl p-6 sm:p-7 shadow-2xl border border-rose-300 space-y-5 animate-scaleUp">
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-rose-600" />
+              </div>
+              <div>
+                <h3 className="font-headline-md font-bold text-lg text-on-surface">
+                  Delete Wedding Workspace?
+                </h3>
+                <span className="text-[11px] text-rose-600 font-bold uppercase tracking-wider">
+                  Irreversible Destruction
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              You are about to permanently delete{' '}
+              <strong className="text-on-surface font-semibold">
+                "{currentWedding?.name || 'this wedding workspace'}"
+              </strong>
+              . All scheduled rituals, guest records, and digital invitations will be decommissioned.
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-on-surface">
+                To confirm, type <span className="font-mono text-rose-600 font-bold">DELETE</span> below:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Type DELETE"
+                className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl bg-surface-container-low border border-rose-200 text-on-surface focus:outline-none focus:ring-2 focus:ring-rose-500"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 text-xs font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteWedding}
+                disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{isDeleting ? 'Deleting...' : 'Permanently Delete'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
