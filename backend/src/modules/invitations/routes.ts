@@ -144,6 +144,10 @@ invitationRouter.get('/soundscapes', invitationController.getSoundscapes);
 invitationRouter.post('/bulk-dispatch', invitationController.bulkDispatch);
 invitationRouter.post('/:invitationId/dispatch', invitationController.dispatchSingle);
 
+import { rsvpController } from '../rsvp/rsvp.controller';
+
 // Public unboxing router (No session or auth required)
 export const publicInvitationRouter = Router();
 publicInvitationRouter.get('/:token', invitationController.getGuestInvitation);
+publicInvitationRouter.get('/:token/rsvp', rsvpController.getPublicRsvp);
+publicInvitationRouter.post('/:token/rsvp', rsvpController.submitPublicRsvp);

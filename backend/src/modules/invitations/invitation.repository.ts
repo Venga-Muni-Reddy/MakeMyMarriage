@@ -343,7 +343,7 @@ export const invitationRepository = {
       }),
     ];
 
-    if (access.id && inv.access) {
+    if (access.id && (inv as any).access) {
       updateOps.push(
         prisma.invitationAccess.update({
           where: { id: access.id },

@@ -9,6 +9,7 @@ import { EventsView } from '../features/events/EventsView';
 import { GuestsView } from '../features/guests/GuestsView';
 import { InvitationsView } from '../features/invitations/InvitationsView';
 import { PublicInvitationView } from '../features/invitations/PublicInvitationView';
+import { RsvpCommandView } from '../features/rsvp/RsvpCommandView';
 import { SettingsView } from '../features/settings/SettingsView';
 import {
   TasksView,
@@ -44,6 +45,8 @@ export const router = createBrowserRouter([
       { index: true, element: <WeddingView /> },
       { path: 'events', element: <EventsView /> },
       { path: 'guests', element: <GuestsView /> },
+      { path: 'rsvps', element: <RsvpCommandView /> },
+      { path: 'rsvp', element: <RsvpCommandView /> },
       { path: 'invitations', element: <InvitationsView /> },
       { path: 'invites', element: <InvitationsView /> },
       { path: 'tasks', element: <TasksView /> },

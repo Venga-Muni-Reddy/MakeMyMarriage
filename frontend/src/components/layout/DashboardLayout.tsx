@@ -23,6 +23,7 @@ import {
   ChevronDown,
   Crown,
   ShieldCheck,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useWedding } from '../../context/WeddingContext';
@@ -87,7 +88,8 @@ export const DashboardLayout: React.FC = () => {
   const navItems = [
     { label: 'Overview', path: `${base}`, icon: Heart, exact: true },
     { label: 'Ceremonies', path: `${base}/events`, icon: Calendar },
-    { label: 'Guests & RSVPs', path: `${base}/guests`, icon: Users },
+    { label: 'Guests', path: `${base}/guests`, icon: Users },
+    { label: 'RSVP Telemetry', path: `${base}/rsvps`, icon: UtensilsCrossed, badge: 'Live' },
     { label: 'Digital Invites', path: `${base}/invitations`, icon: Mail, badge: 'Ready' },
     { label: 'Checklist & Tasks', path: `${base}/tasks`, icon: CheckSquare },
     { label: 'Photo Vault', path: `${base}/gallery`, icon: Camera, badge: '248' },

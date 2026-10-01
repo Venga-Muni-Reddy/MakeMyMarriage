@@ -1,19 +1,18 @@
-import { Router, Request, Response } from 'express';
-import { ApiResponse } from '../../shared/response/api-response';
-
-export class RsvpController {
-  getRsvps = async (_req: Request, res: Response) => {
-    return ApiResponse.success(res, { message: 'List RSVPs endpoint scaffolded', data: [] });
-  };
-  submitRsvp = async (_req: Request, res: Response) => {
-    return ApiResponse.success(res, { message: 'Submit RSVP endpoint scaffolded' });
-  };
-}
-
-export const rsvpController = new RsvpController();
-export const rsvpService = {};
-export const rsvpRepository = {};
+import { Router } from 'express';
+import { rsvpController } from './rsvp.controller';
+import { requireAuth } from '../../middleware/auth.middleware';
+import { requireWeddingMember } from '../../middleware/wedding.middleware';
 
 export const rsvpRouter = Router({ mergeParams: true });
+
+rsvpRouter.use(requireAuth);
+rsvpRouter.use(requireWeddingMember);
+
 rsvpRouter.get('/', rsvpController.getRsvps);
-rsvpRouter.post('/', rsvpController.submitRsvp);
+rsvpRouter.get('/telemetry', rsvpController.getTelemetry);
+rsvpRouter.post('/manual', rsvpController.submitManualRsvp);
+
+// Public router for guest unboxing RSVP
+export const publicRsvpRouter = Router();
+publicRsvpRouter.get('/:token', rsvpController.getPublicRsvp);
+publicRsvpRouter.post('/:token', rsvpController.submitPublicRsvp);
