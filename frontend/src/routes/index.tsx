@@ -9,6 +9,7 @@ import { EventsView } from '../features/events/EventsView';
 import { GuestsView } from '../features/guests/GuestsView';
 import { InvitationsView } from '../features/invitations/InvitationsView';
 import { PublicInvitationView } from '../features/invitations/PublicInvitationView';
+import { PublicWeddingWebsiteView } from '../features/website/PublicWeddingWebsiteView';
 import { RsvpCommandView } from '../features/rsvp/RsvpCommandView';
 import { SettingsView } from '../features/settings/SettingsView';
 import {
@@ -68,12 +69,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/w/:slug',
-    element: (
-      <div className="p-12 text-center">
-        <h1 className="font-serif text-3xl font-bold">Public Wedding Website</h1>
-        <p className="text-stone-500 mt-2">[Public Wedding Website View Scaffolded]</p>
-      </div>
-    ),
+    element: <PublicWeddingWebsiteView />,
   },
   {
     path: '/invite/:token',

@@ -1,19 +1,17 @@
-import { Router, Request, Response } from 'express';
-import { ApiResponse } from '../../shared/response/api-response';
+import { Router } from 'express';
+import { websiteController } from './website.controller';
+import { requireAuth } from '../../middleware/auth.middleware';
 
-export class WebsiteController {
-  getWebsite = async (_req: Request, res: Response) => {
-    return ApiResponse.success(res, { message: 'Get wedding website config endpoint scaffolded' });
-  };
-  updateWebsite = async (_req: Request, res: Response) => {
-    return ApiResponse.success(res, { message: 'Update wedding website config endpoint scaffolded' });
-  };
-}
+// 1. Public Wedding Website Router (mounted at /api/v1/public/weddings)
+export const publicWebsiteRouter = Router();
 
-export const websiteController = new WebsiteController();
-export const websiteService = {};
-export const websiteRepository = {};
+publicWebsiteRouter.get('/:slug', websiteController.getPublicWebsite);
+publicWebsiteRouter.post('/:slug/lookup-pass', websiteController.lookupGuestPass);
+publicWebsiteRouter.get('/:slug/lookup-pass', websiteController.lookupGuestPass);
+publicWebsiteRouter.post('/:slug/blessings', websiteController.addBlessing);
 
+// 2. Protected Workspace Website Router (mounted at /api/v1/weddings/:weddingId/website)
 export const websiteRouter = Router({ mergeParams: true });
-websiteRouter.get('/', websiteController.getWebsite);
-websiteRouter.patch('/', websiteController.updateWebsite);
+
+websiteRouter.get('/', requireAuth, websiteController.getWebsiteConfig);
+websiteRouter.patch('/', requireAuth, websiteController.updateWebsiteConfig);
