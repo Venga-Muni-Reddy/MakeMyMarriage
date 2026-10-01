@@ -12,8 +12,8 @@ import { PublicInvitationView } from '../features/invitations/PublicInvitationVi
 import { PublicWeddingWebsiteView } from '../features/website/PublicWeddingWebsiteView';
 import { RsvpCommandView } from '../features/rsvp/RsvpCommandView';
 import { SettingsView } from '../features/settings/SettingsView';
+import { TasksView } from '../features/tasks/TasksView';
 import {
-  TasksView,
   GalleryView,
   CheckinView,
 } from '../features/views';

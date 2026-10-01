@@ -1,27 +1,16 @@
-import { Router, Request, Response } from 'express';
-import { ApiResponse } from '../../shared/response/api-response';
-
-export class TaskController {
-  getTasks = async (_req: Request, res: Response) => {
-    return ApiResponse.success(res, { message: 'List tasks endpoint scaffolded', data: [] });
-  };
-  createTask = async (_req: Request, res: Response) => {
-    return ApiResponse.created(res, null, 'Create task endpoint scaffolded');
-  };
-  updateTask = async (_req: Request, res: Response) => {
-    return ApiResponse.success(res, { message: 'Update task endpoint scaffolded' });
-  };
-  deleteTask = async (_req: Request, res: Response) => {
-    return ApiResponse.success(res, { message: 'Delete task endpoint scaffolded' });
-  };
-}
-
-export const taskController = new TaskController();
-export const taskService = {};
-export const taskRepository = {};
+import { Router } from 'express';
+import { taskController } from './tasks.controller';
+import { requireAuth } from '../../middleware/auth.middleware';
+import { requireWeddingMember } from '../../middleware/wedding.middleware';
 
 export const taskRouter = Router({ mergeParams: true });
+
+taskRouter.use(requireAuth, requireWeddingMember);
+
 taskRouter.get('/', taskController.getTasks);
+taskRouter.get('/telemetry', taskController.getTelemetry);
 taskRouter.post('/', taskController.createTask);
+taskRouter.post('/seed', taskController.seedTasks);
 taskRouter.patch('/:taskId', taskController.updateTask);
+taskRouter.patch('/:taskId/toggle', taskController.toggleTaskComplete);
 taskRouter.delete('/:taskId', taskController.deleteTask);

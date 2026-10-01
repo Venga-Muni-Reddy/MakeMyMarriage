@@ -25,7 +25,8 @@ Following **Section 116 (Recommended Build Order)** of the System Design Archite
 | **5** | **Digital Invitations & Access Tokens** | `invitations` + `access` | ✅ **COMPLETED** | Guests |
 | **6** | **RSVP Collection & Attendance Tracking** | `rsvp` + `dietary` | ✅ **COMPLETED** | Invitations |
 | **7** | **Public Wedding Website (`/w/:slug`)** | `website` + `public` | ✅ **COMPLETED** | RSVP |
-| **8** | **Task Management & Wedding Planning Checklist** | `tasks` + `planning` | 🟡 **NEXT UP** | Weddings |
+| **8** | **Task Management & Wedding Planning Checklist** | `tasks` + `planning` | ✅ **COMPLETED** | Weddings |
+| **9** | **Wedding Team & Collaborator Role Permissions** | `weddings` + `roles` | 🟡 **NEXT UP** | Weddings |
 
 ---
 
