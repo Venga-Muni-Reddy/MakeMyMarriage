@@ -1,9 +1,9 @@
 # MakeMyMarriage — Project Status & Feature Roadmap
 
 **Version:** 1.0  
-**Current Phase:** Feature 5 Complete (Invites & Tokens) + Logo & Auth UX Polished → Commencing Feature 6 (RSVP & Attendance Tracking)  
+**Current Phase:** Feature 9 Complete (Royal Collaborators & RBAC Suite) → Commencing Feature 10 (Email/WhatsApp Notifications & Reminders)  
 **Architecture:** Modular Monolith (PostgreSQL + Prisma + Express + React + Tailwind + SSE)  
-**Last Updated:** 2026-09-30  
+**Last Updated:** 2026-10-02  
 
 ---
 
@@ -26,16 +26,15 @@ Following **Section 116 (Recommended Build Order)** of the System Design Archite
 | **6** | **RSVP Collection & Attendance Tracking** | `rsvp` + `dietary` | ✅ **COMPLETED** | Invitations |
 | **7** | **Public Wedding Website (`/w/:slug`)** | `website` + `public` | ✅ **COMPLETED** | RSVP |
 | **8** | **Task Management & Wedding Planning Checklist** | `tasks` + `planning` | ✅ **COMPLETED** | Weddings |
-| **9** | **Wedding Team & Collaborator Role Permissions** | `weddings` + `roles` | 🟡 **NEXT UP** | Weddings |
+| **9** | **Wedding Team & Collaborator Role Permissions** | `weddings` + `roles` | ✅ **COMPLETED** | Weddings |
+| **10** | **Email/WhatsApp Notifications & Reminders** | `notifications` | 🟡 **NEXT UP** | Weddings |
 
 ---
 
-## 🎯 Next Feature to Build: Feature 6 — RSVP Collection & Attendance Tracking
+## 🎯 Next Feature to Build: Feature 10 — Email & WhatsApp Notifications & Reminders
 
-### Why RSVP Collection Next?
-With royal digital invitations minted, cryptographic zero-password access tokens issued, and multi-channel WhatsApp passes dispatched (Feature 5), guests can now open their personalized digital wedding passes. The immediate next natural progression according to Section 116 of our architecture is **RSVP Collection & Attendance Tracking** (Feature 6).
-
-This empowers invited guests to RSVP per ceremony, specify plus-one details and dietary/allergy requirements, and allows couples to monitor real-time headcount confirmations via live charts and telemetry.
+### Why Notifications Next?
+With wedding collaborators, planners, and guests registered across ceremonies and tasks, the next critical step in our Section 116 architecture is the **Multi-Channel Notification & Reminder Engine**. This enables instant dispatch of royal WhatsApp digital passes, RSVP confirmation emails via Resend, task assignment notifications to planners, and ritual countdown reminders.
 
 
 ---

@@ -37,3 +37,64 @@ export interface WeddingEntity {
   updatedAt: Date;
   deletedAt: Date | null;
 }
+
+export interface InviteCollaboratorDTO {
+  email: string;
+  name?: string;
+  phone?: string;
+  roleName: string;
+  relation?: string;
+  ceremonyScope?: string;
+  personalNote?: string;
+}
+
+export interface UpdateCollaboratorDTO {
+  roleName?: string;
+  status?: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
+  relation?: string;
+  ceremonyScope?: string;
+  phone?: string;
+}
+
+export interface CollaboratorMemberEntity {
+  id: string;
+  weddingId: string;
+  userId: string;
+  status: 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
+  invitedAt: Date | null;
+  joinedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  role: {
+    id: string;
+    name: string;
+    description: string | null;
+    permissions: any;
+  };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    preferredLanguage?: string;
+  };
+  relation?: string;
+  phone?: string;
+  ceremonyScope?: string;
+  personalNote?: string;
+}
+
+export interface CollaboratorTelemetry {
+  activeCount: number;
+  pendingCount: number;
+  totalPasskeys: number;
+  roleBreakdown: {
+    hosts: number;
+    coHosts: number;
+    planners: number;
+    hospitality: number;
+    observers: number;
+  };
+  securityHealth: string;
+  zeroPermissionLeaks: boolean;
+}
+

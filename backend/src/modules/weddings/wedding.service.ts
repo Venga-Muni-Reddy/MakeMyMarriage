@@ -96,22 +96,110 @@ export class WeddingService {
       throw new ForbiddenError('You do not have access to this wedding workspace');
     }
 
-    return weddingRepository.getMembers(weddingId);
+    return weddingRepository.getMembersWithMetadata(weddingId);
+  }
+
+  async getCollaboratorTelemetry(weddingId: string, userId: string) {
+    const membership = await weddingRepository.findMembership(weddingId, userId);
+    if (!membership || membership.status !== 'ACTIVE') {
+      throw new ForbiddenError('You do not have access to this wedding workspace');
+    }
+
+    return weddingRepository.getTelemetry(weddingId);
+  }
+
+  async inviteCollaborator(
+    weddingId: string,
+    currentUserId: string,
+    payload: {
+      email: string;
+      name?: string;
+      phone?: string;
+      roleName: string;
+      relation?: string;
+      ceremonyScope?: string;
+      personalNote?: string;
+    }
+  ) {
+    const membership = await weddingRepository.findMembership(weddingId, currentUserId);
+    const callerRole = membership?.role.name.toUpperCase();
+    if (!membership || !['OWNER', 'CO_HOST', 'ORGANIZER', 'PLANNER'].includes(callerRole || '')) {
+      throw new ForbiddenError('Only the wedding Owner, Co-Hosts, or Planners can inscribe collaborators');
+    }
+
+    if (payload.roleName.toUpperCase() === 'OWNER' && callerRole !== 'OWNER') {
+      throw new ForbiddenError('Only the Sovereign Owner can bestow Owner privileges');
+    }
+
+    return weddingRepository.inviteCollaborator(weddingId, payload.email, payload.roleName, {
+      name: payload.name,
+      phone: payload.phone,
+      relation: payload.relation,
+      ceremonyScope: payload.ceremonyScope,
+      personalNote: payload.personalNote,
+    });
+  }
+
+  async updateCollaborator(
+    weddingId: string,
+    currentUserId: string,
+    memberId: string,
+    payload: {
+      roleName?: string;
+      status?: any;
+      relation?: string;
+      phone?: string;
+      ceremonyScope?: string;
+    }
+  ) {
+    const membership = await weddingRepository.findMembership(weddingId, currentUserId);
+    const callerRole = membership?.role.name.toUpperCase();
+    if (!membership || !['OWNER', 'CO_HOST', 'ORGANIZER', 'PLANNER'].includes(callerRole || '')) {
+      throw new ForbiddenError('Only the wedding Owner, Co-Hosts, or Planners can alter collaborator access');
+    }
+
+    if (payload.roleName?.toUpperCase() === 'OWNER' && callerRole !== 'OWNER') {
+      throw new ForbiddenError('Only the Sovereign Owner can bestow Owner privileges');
+    }
+
+    return weddingRepository.updateMemberRecord(weddingId, memberId, payload);
+  }
+
+  async removeCollaborator(weddingId: string, currentUserId: string, memberId: string) {
+    const membership = await weddingRepository.findMembership(weddingId, currentUserId);
+    const callerRole = membership?.role.name.toUpperCase();
+    if (!membership || !['OWNER', 'CO_HOST', 'ORGANIZER', 'PLANNER'].includes(callerRole || '')) {
+      throw new ForbiddenError('Only the wedding Owner, Co-Hosts, or Planners can revoke access');
+    }
+
+    return weddingRepository.removeMemberRecord(weddingId, memberId);
+  }
+
+  async resendCollaboratorInvite(weddingId: string, currentUserId: string, memberId: string) {
+    const membership = await weddingRepository.findMembership(weddingId, currentUserId);
+    if (!membership || membership.status !== 'ACTIVE') {
+      throw new ForbiddenError('You do not have access to this wedding workspace');
+    }
+
+    return weddingRepository.resendInviteRecord(weddingId, memberId);
+  }
+
+  async seedImperialCouncil(weddingId: string, currentUserId: string) {
+    const membership = await weddingRepository.findMembership(weddingId, currentUserId);
+    if (!membership || membership.status !== 'ACTIVE') {
+      throw new ForbiddenError('You do not have access to this wedding workspace');
+    }
+
+    return weddingRepository.seedImperialCouncil(weddingId);
   }
 
   async assignMemberRole(weddingId: string, currentUserId: string, email: string, roleName: string) {
     const membership = await weddingRepository.findMembership(weddingId, currentUserId);
-    if (!membership || !['OWNER', 'ORGANIZER'].includes(membership.role.name)) {
-      throw new ForbiddenError('Only the wedding workspace Owner or Organizer can assign roles');
+    if (!membership || !['OWNER', 'ORGANIZER', 'CO_HOST', 'PLANNER'].includes(membership.role.name)) {
+      throw new ForbiddenError('Only the wedding workspace Owner, Co-Host or Organizer can assign roles');
     }
 
-    const targetUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-    });
-    if (!targetUser) {
-      throw new NotFoundError(`No registered user found with email "${email}". Please ask them to sign up first.`);
-    }
-
+    const targetUser = await weddingRepository.findOrCreateUser(email);
     return weddingRepository.assignMemberRole(weddingId, targetUser.id, roleName);
   }
 }

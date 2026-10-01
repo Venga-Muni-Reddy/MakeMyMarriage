@@ -92,10 +92,11 @@ export const DashboardLayout: React.FC = () => {
     { label: 'RSVP Telemetry', path: `${base}/rsvps`, icon: UtensilsCrossed, badge: 'Live' },
     { label: 'Digital Invites', path: `${base}/invitations`, icon: Mail, badge: 'Ready' },
     { label: 'Checklist & Tasks', path: `${base}/tasks`, icon: CheckSquare },
+    { label: 'Council & Team', path: `${base}/team`, icon: ShieldCheck, badge: 'RBAC' },
     { label: 'Photo Vault', path: `${base}/gallery`, icon: Camera, badge: '248' },
     { label: 'VIP QR Check-in', path: `${base}/checkin`, icon: QrCode },
     { label: 'Public Website', path: `/w/${weddingSlug}`, icon: Globe, external: false },
-    { label: 'Settings & Roles', path: `${base}/settings`, icon: Settings },
+    { label: 'Settings & Workspace', path: `${base}/settings`, icon: Settings },
   ];
 
   const handleCopyLink = () => {

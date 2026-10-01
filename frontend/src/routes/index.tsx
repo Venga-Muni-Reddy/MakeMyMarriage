@@ -13,6 +13,7 @@ import { PublicWeddingWebsiteView } from '../features/website/PublicWeddingWebsi
 import { RsvpCommandView } from '../features/rsvp/RsvpCommandView';
 import { SettingsView } from '../features/settings/SettingsView';
 import { TasksView } from '../features/tasks/TasksView';
+import { CollaboratorsView } from '../features/collaborators/CollaboratorsView';
 import {
   GalleryView,
   CheckinView,
@@ -51,11 +52,13 @@ export const router = createBrowserRouter([
       { path: 'invitations', element: <InvitationsView /> },
       { path: 'invites', element: <InvitationsView /> },
       { path: 'tasks', element: <TasksView /> },
+      { path: 'team', element: <CollaboratorsView /> },
+      { path: 'roles', element: <CollaboratorsView /> },
+      { path: 'council', element: <CollaboratorsView /> },
+      { path: 'collaborators', element: <CollaboratorsView /> },
       { path: 'gallery', element: <GalleryView /> },
       { path: 'checkin', element: <CheckinView /> },
       { path: 'settings', element: <SettingsView /> },
-      { path: 'roles', element: <SettingsView /> },
-      { path: 'team', element: <SettingsView /> },
       {
         path: 'website',
         element: (
