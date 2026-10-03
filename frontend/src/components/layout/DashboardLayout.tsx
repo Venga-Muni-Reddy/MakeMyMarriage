@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useWedding } from '../../context/WeddingContext';
+import { notificationService, NotificationItem } from '../../services/notification.service';
 
 export const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -41,22 +42,45 @@ export const DashboardLayout: React.FC = () => {
   const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
   const switcherRef = useRef<HTMLDivElement>(null);
 
-  // Close mobile menu and dropdown on route change
+  // Top-bar Notification Center State
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const [inboxNotifications, setInboxNotifications] = useState<NotificationItem[]>([]);
+
+  // Close mobile menu and dropdowns on route change
   useEffect(() => {
     setMobileMenuOpen(false);
     setIsSwitcherOpen(false);
+    setIsNotifOpen(false);
   }, [location.pathname]);
 
-  // Click outside to close switcher dropdown
+  // Click outside to close switcher or notification dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (switcherRef.current && !switcherRef.current.contains(event.target as Node)) {
         setIsSwitcherOpen(false);
       }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setIsNotifOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const loadNotifications = async () => {
+    if (!currentWedding?.id) return;
+    try {
+      const data = await notificationService.getNotifications(currentWedding.id);
+      setInboxNotifications(data.slice(0, 6));
+    } catch {
+      // silent fallback
+    }
+  };
+
+  useEffect(() => {
+    loadNotifications();
+  }, [currentWedding?.id]);
 
   // Synchronize route :weddingId with active wedding context
   useEffect(() => {
@@ -93,6 +117,7 @@ export const DashboardLayout: React.FC = () => {
     { label: 'Digital Invites', path: `${base}/invitations`, icon: Mail, badge: 'Ready' },
     { label: 'Checklist & Tasks', path: `${base}/tasks`, icon: CheckSquare },
     { label: 'Council & Team', path: `${base}/team`, icon: ShieldCheck, badge: 'RBAC' },
+    { label: 'Dispatches & Alerts', path: `${base}/notifications`, icon: Bell, badge: 'Hub' },
     { label: 'Photo Vault', path: `${base}/gallery`, icon: Camera, badge: '248' },
     { label: 'VIP QR Check-in', path: `${base}/checkin`, icon: QrCode },
     { label: 'Public Website', path: `/w/${weddingSlug}`, icon: Globe, external: false },
@@ -471,11 +496,87 @@ export const DashboardLayout: React.FC = () => {
               <span>Preview Live</span>
             </Link>
 
-            {/* Notifications */}
-            <button className="relative p-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors">
-              <Bell className="w-4 h-4 text-on-surface-variant" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-secondary ring-2 ring-white" />
-            </button>
+            {/* Notifications Dropdown */}
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setIsNotifOpen(!isNotifOpen)}
+                className="relative p-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors"
+                title="Royal Dispatches & Alerts"
+              >
+                <Bell className="w-4 h-4 text-on-surface-variant" />
+                {inboxNotifications.length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-secondary ring-2 ring-white animate-pulse" />
+                )}
+              </button>
+
+              {isNotifOpen && (
+                <div className="absolute right-0 top-12 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-[#D4AF37]/30 py-3 z-50 animate-in fade-in zoom-in-95">
+                  <div className="px-4 pb-2 border-b border-stone-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-serif font-bold text-sm text-[#1E1B19]">
+                        Royal Dispatches & Alerts
+                      </span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#FAF2EE] text-[#780616]">
+                        {inboxNotifications.length}
+                      </span>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (currentWedding?.id) {
+                          await notificationService.markAllAsRead(currentWedding.id);
+                          loadNotifications();
+                        }
+                      }}
+                      className="text-[11px] text-[#B32446] hover:underline font-semibold"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto divide-y divide-stone-100">
+                    {inboxNotifications.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-stone-400">
+                        No pending alerts at this auspicious hour
+                      </div>
+                    ) : (
+                      inboxNotifications.map((notif) => (
+                        <div key={notif.id} className="p-3 hover:bg-[#FAF2EE]/40 transition-colors">
+                          <div className="flex items-start gap-2.5">
+                            <span className="text-base shrink-0">
+                              {notif.channel === 'WHATSAPP' ? '💬' : '💌'}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-[#1E1B19] truncate">
+                                {notif.subject || 'Royal Announcement'}
+                              </p>
+                              <p className="text-[11px] text-stone-500 line-clamp-2 mt-0.5">
+                                {notif.payload?.message || 'Transmission delivered'}
+                              </p>
+                              <span className="text-[10px] text-stone-400 block mt-1">
+                                {new Date(notif.createdAt).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="pt-2 px-3 border-t border-stone-100 text-center">
+                    <Link
+                      to={`${base}/notifications`}
+                      onClick={() => setIsNotifOpen(false)}
+                      className="text-xs text-[#7F560C] font-bold hover:underline block py-1"
+                    >
+                      Open Full Dispatch Hub →
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Add Event Button */}
             <Link

@@ -14,6 +14,7 @@ import { RsvpCommandView } from '../features/rsvp/RsvpCommandView';
 import { SettingsView } from '../features/settings/SettingsView';
 import { TasksView } from '../features/tasks/TasksView';
 import { CollaboratorsView } from '../features/collaborators/CollaboratorsView';
+import { NotificationHubView } from '../features/notifications/NotificationHubView';
 import {
   GalleryView,
   CheckinView,
@@ -56,6 +57,9 @@ export const router = createBrowserRouter([
       { path: 'roles', element: <CollaboratorsView /> },
       { path: 'council', element: <CollaboratorsView /> },
       { path: 'collaborators', element: <CollaboratorsView /> },
+      { path: 'notifications', element: <NotificationHubView /> },
+      { path: 'dispatches', element: <NotificationHubView /> },
+      { path: 'alerts', element: <NotificationHubView /> },
       { path: 'gallery', element: <GalleryView /> },
       { path: 'checkin', element: <CheckinView /> },
       { path: 'settings', element: <SettingsView /> },

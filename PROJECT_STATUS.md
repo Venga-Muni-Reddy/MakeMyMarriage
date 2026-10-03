@@ -1,7 +1,7 @@
 # MakeMyMarriage — Project Status & Feature Roadmap
 
 **Version:** 1.0  
-**Current Phase:** Feature 9 Complete (Royal Collaborators & RBAC Suite) → Commencing Feature 10 (Email/WhatsApp Notifications & Reminders)  
+**Current Phase:** Feature 10 Complete (Email/WhatsApp Notifications & Reminders) → Commencing Feature 11 (Cloudinary Photo Vault & Guest Media Gallery)  
 **Architecture:** Modular Monolith (PostgreSQL + Prisma + Express + React + Tailwind + SSE)  
 **Last Updated:** 2026-10-02  
 
@@ -27,15 +27,15 @@ Following **Section 116 (Recommended Build Order)** of the System Design Archite
 | **7** | **Public Wedding Website (`/w/:slug`)** | `website` + `public` | ✅ **COMPLETED** | RSVP |
 | **8** | **Task Management & Wedding Planning Checklist** | `tasks` + `planning` | ✅ **COMPLETED** | Weddings |
 | **9** | **Wedding Team & Collaborator Role Permissions** | `weddings` + `roles` | ✅ **COMPLETED** | Weddings |
-| **10** | **Email/WhatsApp Notifications & Reminders** | `notifications` | 🟡 **NEXT UP** | Weddings |
+| **10** | **Email/WhatsApp Notifications & Reminders** | `notifications` | ✅ **COMPLETED** | Weddings |
+| **11** | **Cloudinary Photo Vault & Guest Media Gallery** | `media` + `photos` | 🟡 **NEXT UP** | Weddings |
 
 ---
 
-## 🎯 Next Feature to Build: Feature 10 — Email & WhatsApp Notifications & Reminders
+## 🎯 Next Feature to Build: Feature 11 — Cloudinary Photo Vault & Guest Media Gallery
 
-### Why Notifications Next?
-With wedding collaborators, planners, and guests registered across ceremonies and tasks, the next critical step in our Section 116 architecture is the **Multi-Channel Notification & Reminder Engine**. This enables instant dispatch of royal WhatsApp digital passes, RSVP confirmation emails via Resend, task assignment notifications to planners, and ritual countdown reminders.
-
+### Why Photo Vault Next?
+With the notification engine and guest communications established, the next core milestone is the royal media vault and guest photo collection stream, supporting guest photo uploads, QR-code based photo sharing, ceremony album organization, and Cloudinary-powered asset storage.
 
 ---
 
@@ -91,8 +91,13 @@ With wedding collaborators, planners, and guests registered across ceremonies an
 | **2026-09-29** | **Feature 3: Events & Ceremonies** | Multi-ceremony itinerary, calendar timelines, venues, and conflict checking. |
 | **2026-09-29** | **Feature 4: Guest Registry & Seating** | Household groupings, Mandap seating tags, dietary preferences, and archive/unarchive. |
 | **2026-09-30** | **Feature 5: Digital Invitations & Tokens** | Royal Invitation Studio, 4 Heritage Themes, zero-password cryptographic magic tokens (`tok_...`), WhatsApp pass dispatch, live mobile simulator, and public guest unboxing page (`/invite/:token`). |
+| **2026-10-01** | **Feature 6: RSVP Collection & Attendance** | Multi-event RSVP collection, dietary preferences, guest count, and attendance statistics. |
+| **2026-10-01** | **Feature 7: Public Wedding Website** | `/w/:slug` public royal website with itinerary, story, countdown, dress code, and venue maps. |
+| **2026-10-02** | **Feature 8: Task Management & Planning** | Comprehensive planning checklist, categories, due dates, assignments, and progress analytics. |
+| **2026-10-02** | **Feature 9: Collaborator RBAC Suite** | Multi-user roles (Owner, Co-Planner, Coordinator, Viewer), email invitations, and permission enforcement. |
+| **2026-10-02** | **Feature 10: Multi-Channel Notifications** | Royal Notification Hub, Resend email dispatch, WhatsApp simulation, countdown reminder triggers, top-bar interactive alert center, broadcast composer, and dispatch ledger. |
 
 ---
 
 > [!NOTE]  
-> **Status:** Features 1–5 completed, verified, and pushed to remote. Logo navigation and authenticated homepage state are live. Now proceeding with Feature 6 (RSVP Collection & Attendance Tracking).
+> **Status:** Features 1–10 completed, tested, and running cleanly on local dev servers. Proceeding to Feature 11 (Cloudinary Photo Vault & Guest Media Gallery).
