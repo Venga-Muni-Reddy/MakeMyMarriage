@@ -36,6 +36,7 @@ apiRouter.use('/weddings/:weddingId/tasks', taskRouter);
 apiRouter.use('/weddings/:weddingId/media', mediaRouter);
 apiRouter.use('/weddings/:weddingId/checkins', checkinRouter);
 apiRouter.use('/weddings/:weddingId/livestreams', livestreamRouter);
+apiRouter.use('/weddings/:weddingId/livestream', livestreamRouter);
 apiRouter.use('/weddings/:weddingId/website', websiteRouter);
 apiRouter.use('/weddings/:weddingId/notifications', notificationRouter);
 apiRouter.use('/weddings/:weddingId/activities', activityRouter);

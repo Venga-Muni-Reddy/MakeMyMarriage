@@ -1,19 +1,26 @@
-import { Router, Request, Response } from 'express';
-import { ApiResponse } from '../../shared/response/api-response';
+import { Router } from 'express';
+import { livestreamController } from './livestream.controller';
+import { livestreamService } from './livestream.service';
+import { livestreamRepository } from './livestream.repository';
 
-export class LivestreamController {
-  getStreams = async (_req: Request, res: Response) => {
-    return ApiResponse.success(res, { message: 'List live streams endpoint scaffolded', data: [] });
-  };
-  createStream = async (_req: Request, res: Response) => {
-    return ApiResponse.created(res, null, 'Create live stream endpoint scaffolded');
-  };
-}
-
-export const livestreamController = new LivestreamController();
-export const livestreamService = {};
-export const livestreamRepository = {};
+export { livestreamController, livestreamService, livestreamRepository };
 
 export const livestreamRouter = Router({ mergeParams: true });
+
+// Active live stream with real-time chat & telemetry
+livestreamRouter.get('/active', livestreamController.getActiveStream);
+
+// List all ceremony live streams
 livestreamRouter.get('/', livestreamController.getStreams);
+
+// Update stream source / camera / ritual
+livestreamRouter.patch('/:streamId', livestreamController.updateStream);
+
+// Send virtual blessing message
+livestreamRouter.post('/:streamId/blessings', livestreamController.sendBlessing);
+
+// Shower rose petals
+livestreamRouter.post('/:streamId/petals', livestreamController.showerPetals);
+
+// Create or update stream
 livestreamRouter.post('/', livestreamController.createStream);

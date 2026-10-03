@@ -18,6 +18,7 @@ import { NotificationHubView } from '../features/notifications/NotificationHubVi
 import { PhotoVaultView } from '../features/gallery/PhotoVaultView';
 import { GuestPhotoUploadView } from '../features/gallery/GuestPhotoUploadView';
 import { CheckinDeskView } from '../features/checkin/CheckinDeskView';
+import { LiveStreamBroadcastView } from '../features/livestream/LiveStreamBroadcastView';
 
 export const router = createBrowserRouter([
   {
@@ -66,6 +67,10 @@ export const router = createBrowserRouter([
       { path: 'checkins', element: <CheckinDeskView /> },
       { path: 'gate', element: <CheckinDeskView /> },
       { path: 'access', element: <CheckinDeskView /> },
+      { path: 'livestream', element: <LiveStreamBroadcastView /> },
+      { path: 'live', element: <LiveStreamBroadcastView /> },
+      { path: 'broadcast', element: <LiveStreamBroadcastView /> },
+      { path: 'mandap', element: <LiveStreamBroadcastView /> },
       { path: 'settings', element: <SettingsView /> },
       {
         path: 'website',
@@ -81,6 +86,10 @@ export const router = createBrowserRouter([
   {
     path: '/w/:slug',
     element: <PublicWeddingWebsiteView />,
+  },
+  {
+    path: '/w/:slug/live',
+    element: <LiveStreamBroadcastView />,
   },
   {
     path: '/w/:slug/upload-photos',

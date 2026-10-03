@@ -24,6 +24,7 @@ import {
   Crown,
   ShieldCheck,
   UtensilsCrossed,
+  Tv,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useWedding } from '../../context/WeddingContext';
@@ -120,6 +121,7 @@ export const DashboardLayout: React.FC = () => {
     { label: 'Dispatches & Alerts', path: `${base}/notifications`, icon: Bell, badge: 'Hub' },
     { label: 'Photo Vault', path: `${base}/gallery`, icon: Camera, badge: '248' },
     { label: 'VIP QR Check-in', path: `${base}/checkin`, icon: QrCode },
+    { label: 'Live Broadcast', path: `${base}/live`, icon: Tv, badge: '4K Live' },
     { label: 'Public Website', path: `/w/${weddingSlug}`, icon: Globe, external: false },
     { label: 'Settings & Workspace', path: `${base}/settings`, icon: Settings },
   ];
