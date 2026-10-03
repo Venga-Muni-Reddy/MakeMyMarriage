@@ -35,8 +35,8 @@ import {
 
 export const PhotoVaultView: React.FC = () => {
   const { weddingId } = useParams<{ weddingId: string }>();
-  const { currentWedding } = useWedding();
-  const activeWeddingId = weddingId || currentWedding?.id || '';
+  const { currentWedding, weddings } = useWedding();
+  const activeWeddingId = weddingId || currentWedding?.id || weddings[0]?.id || '';
 
   // Data states
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
@@ -81,10 +81,11 @@ export const PhotoVaultView: React.FC = () => {
         }),
         mediaService.getTelemetry(activeWeddingId),
       ]);
-      setPhotos(photoList);
+      setPhotos(Array.isArray(photoList) ? photoList : []);
       setTelemetry(stats);
     } catch (err) {
       console.error('Failed to load media vault:', err);
+      setPhotos([]);
     } finally {
       setIsLoading(false);
     }
@@ -98,17 +99,18 @@ export const PhotoVaultView: React.FC = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (activeLightboxIndex === null) return;
+      const count = (photos || []).length;
       if (e.key === 'Escape') setActiveLightboxIndex(null);
-      if (e.key === 'ArrowRight') {
-        setActiveLightboxIndex((prev) => (prev !== null && prev < photos.length - 1 ? prev + 1 : 0));
+      if (e.key === 'ArrowRight' && count > 0) {
+        setActiveLightboxIndex((prev) => (prev !== null && prev < count - 1 ? prev + 1 : 0));
       }
-      if (e.key === 'ArrowLeft') {
-        setActiveLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : photos.length - 1));
+      if (e.key === 'ArrowLeft' && count > 0) {
+        setActiveLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : count - 1));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeLightboxIndex, photos.length]);
+  }, [activeLightboxIndex, (photos || []).length]);
 
   // Like action handler
   const handleToggleLike = async (e: React.MouseEvent, photoId: string) => {
@@ -221,7 +223,8 @@ export const PhotoVaultView: React.FC = () => {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  const filteredPhotos = photos.filter((p) => {
+  const filteredPhotos = (photos || []).filter((p) => {
+    if (!p) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -325,7 +328,7 @@ export const PhotoVaultView: React.FC = () => {
                 <span className="text-xs text-[#827566] uppercase tracking-wider block font-medium">Total Memories</span>
                 <div className="flex items-baseline gap-2 mt-0.5">
                   <span className="text-2xl sm:text-3xl font-serif font-bold text-[#1E1B19]">
-                    {telemetry?.totalMemories || photos.length}
+                    {telemetry?.totalMemories ?? (photos?.length || 0)}
                   </span>
                   <span className="text-xs text-emerald-700 font-semibold">+24 today</span>
                 </div>
@@ -449,7 +452,7 @@ export const PhotoVaultView: React.FC = () => {
           {/* Responsive Horizontal Pills */}
           <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto pb-1.5 lg:pb-0 scrollbar-none">
             {[
-              { id: 'all', label: 'All Memories', count: telemetry?.totalMemories || photos.length },
+              { id: 'all', label: 'All Memories', count: telemetry?.totalMemories ?? (photos?.length || 0) },
               { id: 'haldi', label: 'Haldi Radiance', count: 54 },
               { id: 'mehendi', label: 'Mehendi Artistry', count: 68 },
               { id: 'sangeet', label: 'Imperial Sangeet', count: 92 },

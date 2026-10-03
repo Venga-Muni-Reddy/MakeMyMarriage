@@ -90,8 +90,8 @@ export class MediaService {
    * Fetch upload signature from backend
    */
   async getSignature(weddingId: string): Promise<CloudinarySignature> {
-    const response = await api.get(`/weddings/${weddingId}/media/signature`);
-    return response.data.data;
+    const res: any = await api.get(`/weddings/${weddingId}/media/signature`);
+    return res?.data ?? res;
   }
 
   /**
@@ -107,26 +107,27 @@ export class MediaService {
       sortBy?: 'newest' | 'most_liked' | 'ceremony_order' | 'pending';
     }
   ): Promise<PhotoItem[]> {
-    const response = await api.get(`/weddings/${weddingId}/media/photos`, {
+    const res: any = await api.get(`/weddings/${weddingId}/media/photos`, {
       params: filters,
     });
-    return response.data.data;
+    const items = res?.data ?? res;
+    return Array.isArray(items) ? items : [];
   }
 
   /**
    * Get media telemetry aggregates
    */
   async getTelemetry(weddingId: string): Promise<MediaTelemetry> {
-    const response = await api.get(`/weddings/${weddingId}/media/telemetry`);
-    return response.data.data;
+    const res: any = await api.get(`/weddings/${weddingId}/media/telemetry`);
+    return res?.data ?? res;
   }
 
   /**
    * Register a new photo after upload
    */
   async registerPhoto(weddingId: string, payload: RegisterPhotoPayload): Promise<PhotoItem> {
-    const response = await api.post(`/weddings/${weddingId}/media/photos`, payload);
-    return response.data.data;
+    const res: any = await api.post(`/weddings/${weddingId}/media/photos`, payload);
+    return res?.data ?? res;
   }
 
   /**
@@ -141,19 +142,19 @@ export class MediaService {
       rejectionReason?: string;
     }
   ): Promise<PhotoItem> {
-    const response = await api.patch(
+    const res: any = await api.patch(
       `/weddings/${weddingId}/media/photos/${photoId}/moderate`,
       payload
     );
-    return response.data.data;
+    return res?.data ?? res;
   }
 
   /**
    * Toggle like on photo
    */
   async toggleLike(weddingId: string, photoId: string): Promise<PhotoItem> {
-    const response = await api.post(`/weddings/${weddingId}/media/photos/${photoId}/like`);
-    return response.data.data;
+    const res: any = await api.post(`/weddings/${weddingId}/media/photos/${photoId}/like`);
+    return res?.data ?? res;
   }
 
   /**
@@ -178,18 +179,19 @@ export class MediaService {
       format?: string;
     }
   ): Promise<PhotoItem> {
-    const response = await api.post(`/weddings/${weddingId}/media/guest-upload`, payload);
-    return response.data.data;
+    const res: any = await api.post(`/weddings/${weddingId}/media/guest-upload`, payload);
+    return res?.data ?? res;
   }
 
   /**
    * Public gallery feed for website
    */
   async getPublicGallery(weddingId: string, eventId?: string): Promise<PhotoItem[]> {
-    const response = await api.get(`/weddings/${weddingId}/media/public-gallery`, {
+    const res: any = await api.get(`/weddings/${weddingId}/media/public-gallery`, {
       params: { eventId },
     });
-    return response.data.data;
+    const items = res?.data ?? res;
+    return Array.isArray(items) ? items : [];
   }
 
   /**
