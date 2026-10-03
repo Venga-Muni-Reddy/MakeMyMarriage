@@ -21,7 +21,7 @@ authRouter.post('/signup', async (req: Request, res: Response, next: NextFunctio
     res.cookie('mmm_session', token, {
       httpOnly: true,
       secure: config.session.cookieSecure,
-      sameSite: 'lax',
+      sameSite: config.session.cookieSecure ? 'none' : 'lax',
       path: '/',
       maxAge: config.session.maxAge,
     });
@@ -47,7 +47,7 @@ authRouter.post('/login', async (req: Request, res: Response, next: NextFunction
     res.cookie('mmm_session', token, {
       httpOnly: true,
       secure: config.session.cookieSecure,
-      sameSite: 'lax',
+      sameSite: config.session.cookieSecure ? 'none' : 'lax',
       path: '/',
       maxAge: maxAgeMs,
     });
@@ -72,7 +72,7 @@ authRouter.post('/logout', (_req: Request, res: Response) => {
   res.clearCookie('mmm_session', {
     httpOnly: true,
     secure: config.session.cookieSecure,
-    sameSite: 'lax',
+    sameSite: config.session.cookieSecure ? 'none' : 'lax',
     path: '/',
   });
 

@@ -8,6 +8,15 @@ export const api = axios.create({
   },
 });
 
+// Attach Bearer token fallback for cross-domain requests
+api.interceptors.request.use((reqConfig) => {
+  const token = localStorage.getItem('mmm_token');
+  if (token && reqConfig.headers) {
+    reqConfig.headers.Authorization = `Bearer ${token}`;
+  }
+  return reqConfig;
+});
+
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {

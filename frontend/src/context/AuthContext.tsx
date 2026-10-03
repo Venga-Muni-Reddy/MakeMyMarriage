@@ -38,12 +38,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (payload: LoginPayload) => {
     const res = await authService.login(payload);
+    if (res.data?.token) {
+      localStorage.setItem('mmm_token', res.data.token);
+    }
     setUser(res.data.user);
     return res.data.user;
   };
 
   const signup = async (payload: SignupPayload) => {
     const res = await authService.signup(payload);
+    if (res.data?.token) {
+      localStorage.setItem('mmm_token', res.data.token);
+    }
     setUser(res.data.user);
     return res.data.user;
   };
@@ -52,6 +58,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await authService.logout();
     } finally {
+      localStorage.removeItem('mmm_token');
       setUser(null);
     }
   };
