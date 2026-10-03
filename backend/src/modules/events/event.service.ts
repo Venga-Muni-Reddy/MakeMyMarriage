@@ -10,12 +10,6 @@ export class EventService {
     }
 
     const events = await eventRepository.findByWeddingId(weddingId);
-    if (events.length === 0) {
-      // Auto-seed standard ceremonies based on the wedding date
-      const baseDate = wedding.weddingDate ? wedding.weddingDate.toISOString() : undefined;
-      return eventRepository.seedDefaultCeremonies(weddingId, baseDate);
-    }
-
     return events;
   }
 

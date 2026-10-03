@@ -43,11 +43,22 @@ export const NotificationHubView: React.FC = () => {
   const [broadcastData, setBroadcastData] = useState<BroadcastPayload>({
     segment: 'ALL_GUESTS',
     channel: 'BOTH',
-    subject: '👑 Royal Vivaha Update: Nuptials of Ananya & Rahul',
+    subject: `👑 Wedding Update: ${currentWedding?.name || 'Wedding Celebrations'}`,
     message:
-      'We eagerly await your gracious presence at The Leela Palace, Udaipur. Kindly review your digital pass for ceremonial schedules and private lake boat transfers.',
-    ceremonyScope: 'All 5 Ceremonies',
+      'We eagerly await your gracious presence at our wedding celebrations. Kindly review your digital pass for ceremonial schedules and event details.',
+    ceremonyScope: 'All Ceremonies',
   });
+
+  useEffect(() => {
+    if (currentWedding?.name) {
+      setBroadcastData((prev) => ({
+        ...prev,
+        subject: `👑 Wedding Update: ${currentWedding.name}`,
+        message: `We eagerly await your gracious presence to celebrate ${currentWedding.name}. Kindly review your digital pass for ceremonial schedules and event details.`,
+        ceremonyScope: 'All Ceremonies',
+      }));
+    }
+  }, [currentWedding?.name]);
 
   // Triggering countdown alerts
   const [isTriggeringReminders, setIsTriggeringReminders] = useState(false);
@@ -509,8 +520,8 @@ export const NotificationHubView: React.FC = () => {
 
                     const contact =
                       item.channel === 'WHATSAPP'
-                        ? item.recipientGuest?.phone || item.payload?.recipientPhone || '+91 98290 12345'
-                        : item.recipientGuest?.email || item.recipientUser?.email || item.payload?.recipientEmail || 'guest@palace.in';
+                        ? item.recipientGuest?.phone || item.payload?.recipientPhone || '—'
+                        : item.recipientGuest?.email || item.recipientUser?.email || item.payload?.recipientEmail || '—';
 
                     const isSuccess = item.status === 'DELIVERED' || item.status === 'SENT';
                     const isFailed = item.status === 'FAILED';

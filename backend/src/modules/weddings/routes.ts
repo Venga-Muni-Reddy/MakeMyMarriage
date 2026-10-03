@@ -256,6 +256,25 @@ weddingRouter.post('/:weddingId/members/:memberId/resend', requireAuth, async (r
 
 /**
  * @openapi
+ * /api/v1/weddings/{weddingId}/members/accept:
+ *   post:
+ *     summary: Accept pending council invitation and activate membership
+ *     tags: [Weddings]
+ */
+weddingRouter.post('/:weddingId/members/accept', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await weddingService.acceptInvitation(req.params.weddingId, req.user!.userId);
+    return ApiResponse.success(res, {
+      data: result,
+      message: 'Council invitation successfully accepted. Welcome to the Vivaha planning council!',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
  * /api/v1/weddings/{weddingId}/members:
  *   post:
  *     summary: Assign or update role of a collaborator/member (legacy)

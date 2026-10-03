@@ -73,7 +73,6 @@ export class MediaService {
    * Fetch wedding photos with automatic demonstration showcase fallback
    */
   async getPhotos(weddingId: string, filter: PhotoQueryFilter = {}) {
-    await this.repo.seedRoyalPhotosIfEmpty(weddingId);
     return this.repo.findPhotos(weddingId, filter);
   }
 
@@ -141,7 +140,6 @@ export class MediaService {
    * Get media telemetry aggregates
    */
   async getTelemetry(weddingId: string): Promise<MediaTelemetryDto> {
-    await this.repo.seedRoyalPhotosIfEmpty(weddingId);
     return this.repo.getTelemetry(weddingId);
   }
 
@@ -174,7 +172,6 @@ export class MediaService {
    * Public gallery feed for guests and public website
    */
   async getPublicGallery(weddingId: string, eventId?: string) {
-    await this.repo.seedRoyalPhotosIfEmpty(weddingId);
     return this.repo.findPhotos(weddingId, {
       eventId: eventId && eventId !== 'all' ? eventId : undefined,
       visibility: PhotoVisibility.PUBLIC,

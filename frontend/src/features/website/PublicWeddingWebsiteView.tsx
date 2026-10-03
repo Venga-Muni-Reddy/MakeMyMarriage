@@ -334,6 +334,13 @@ export const PublicWeddingWebsiteView: React.FC = () => {
 
         {/* CTA Buttons */}
         <div className="relative z-10 mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to={`/w/${slug}/live`}
+            className="px-6 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-900/40 transition-all transform active:scale-95 flex items-center gap-2"
+          >
+            <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+            <span>🔴 Watch Mandap Live Telecast</span>
+          </Link>
           <a
             href="#ceremonies"
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-stone-950 font-bold text-xs uppercase tracking-wider shadow-lg transition-all transform active:scale-95"

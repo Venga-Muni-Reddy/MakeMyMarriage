@@ -89,7 +89,7 @@ interface FloatingPetal {
 export const LiveStreamBroadcastView: React.FC = () => {
   const { weddingId } = useParams<{ weddingId: string }>();
   const { currentWedding } = useWedding();
-  const activeWeddingId = weddingId || currentWedding?.id || 'f238b9ec-9c7f-41d3-8885-0080ae24a462';
+  const activeWeddingId = weddingId || currentWedding?.id || '';
 
   // Stream state
   const [streamData, setStreamData] = useState<ActiveStreamResponse | null>(null);
@@ -411,8 +411,8 @@ export const LiveStreamBroadcastView: React.FC = () => {
   }
 
   const embedUrl = streamData?.embedUrl || 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1';
-  const petalsFormatted = Number(streamData?.telemetry?.petalsCount || 142850).toLocaleString();
-  const viewersCount = Number(streamData?.telemetry?.viewerCount || 1840).toLocaleString();
+  const petalsFormatted = Number(streamData?.telemetry?.petalsCount || 0).toLocaleString();
+  const viewersCount = Number(streamData?.telemetry?.viewerCount || 0).toLocaleString();
   const activeVow = SACRED_VOWS[currentVowIndex] || SACRED_VOWS[3];
 
   return (
@@ -462,7 +462,7 @@ export const LiveStreamBroadcastView: React.FC = () => {
             <div className="flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-stone-900/80 border border-stone-800 text-stone-300 text-xs">
               <Users className="w-3.5 h-3.5 text-amber-400" />
               <span>
-                <strong className="text-white font-medium">{viewersCount}</strong> Watching (🇺🇸 🇬🇧 🇨🇦 🇦🇪 🇮🇳)
+                <strong className="text-white font-medium">{viewersCount}</strong> Watching
               </span>
             </div>
 
@@ -591,9 +591,8 @@ export const LiveStreamBroadcastView: React.FC = () => {
                   <span className="hidden sm:flex items-center space-x-1 text-stone-300">
                     <span>1.2s Ultra-Low Latency</span>
                   </span>
-                  <span className="text-stone-500">•</span>
-                  <span className="text-amber-300 font-medium">
-                    City Palace Udaipur, Rajasthan
+                  <span className="text-amber-300 font-medium truncate max-w-[200px]">
+                    {currentWedding?.name || 'Sacred Mandap'}
                   </span>
                 </div>
 
@@ -849,37 +848,47 @@ export const LiveStreamBroadcastView: React.FC = () => {
 
               {/* Chat Message List */}
               <div className="flex-1 overflow-y-auto space-y-3 max-h-[320px] pr-1 scrollbar-thin scrollbar-thumb-stone-800">
-                {blessingsList.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`rounded-xl p-3 text-xs border transition-all ${
-                      msg.isFamily
-                        ? 'bg-[#1e130e] border-amber-700/40'
-                        : 'bg-[#110c09] border-stone-800/80'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center space-x-1.5">
-                        <strong className="text-amber-200 font-semibold">{msg.authorName}</strong>
-                        {msg.isFamily && (
-                          <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 text-[10px] font-medium border border-amber-500/30">
-                            Family
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-stone-500 font-mono">{msg.time}</span>
-                    </div>
-
-                    <p className="text-stone-300 leading-relaxed">{msg.message}</p>
-
-                    <div className="text-[10px] text-stone-500 mt-1.5 flex items-center justify-between">
-                      <span className="flex items-center gap-1">
-                        <Globe className="w-3 h-3 text-stone-500" /> {msg.location}
-                      </span>
-                      <span className="text-amber-400/90 font-medium">+50 🌹</span>
-                    </div>
+                {blessingsList.length === 0 ? (
+                  <div className="p-6 text-center rounded-xl bg-[#110c09] border border-stone-800/80 my-4">
+                    <Sparkles className="w-6 h-6 text-amber-400 mx-auto mb-2 opacity-70" />
+                    <p className="text-xs font-semibold text-stone-300">No Blessings Posted Yet</p>
+                    <p className="text-[11px] text-stone-500 mt-1">
+                      Be the first to send your heartfelt prayers and shower rose petals!
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  blessingsList.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`rounded-xl p-3 text-xs border transition-all ${
+                        msg.isFamily
+                          ? 'bg-[#1e130e] border-amber-700/40'
+                          : 'bg-[#110c09] border-stone-800/80'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center space-x-1.5">
+                          <strong className="text-amber-200 font-semibold">{msg.authorName}</strong>
+                          {msg.isFamily && (
+                            <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 text-[10px] font-medium border border-amber-500/30">
+                              Family
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-stone-500 font-mono">{msg.time}</span>
+                      </div>
+
+                      <p className="text-stone-300 leading-relaxed">{msg.message}</p>
+
+                      <div className="text-[10px] text-stone-500 mt-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <Globe className="w-3 h-3 text-stone-500" /> {msg.location}
+                        </span>
+                        <span className="text-amber-400/90 font-medium">+50 🌹</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               {/* Send Blessing Form */}
@@ -976,7 +985,7 @@ export const LiveStreamBroadcastView: React.FC = () => {
                 🇺🇸 United States
               </div>
               <div className="text-lg font-bold text-amber-200">
-                {streamData?.telemetry?.viewerBreakdown?.us || 420} Guests
+                {streamData?.telemetry?.viewerBreakdown?.us ?? 0} Guests
               </div>
               <div className="text-[10px] text-stone-400">New York, Bay Area, Austin</div>
             </div>
@@ -986,7 +995,7 @@ export const LiveStreamBroadcastView: React.FC = () => {
                 🇬🇧 United Kingdom
               </div>
               <div className="text-lg font-bold text-amber-200">
-                {streamData?.telemetry?.viewerBreakdown?.uk || 310} Guests
+                {streamData?.telemetry?.viewerBreakdown?.uk ?? 0} Guests
               </div>
               <div className="text-[10px] text-stone-400">London, Leicester, Birmingham</div>
             </div>
@@ -996,7 +1005,7 @@ export const LiveStreamBroadcastView: React.FC = () => {
                 🇨🇦 Canada
               </div>
               <div className="text-lg font-bold text-amber-200">
-                {streamData?.telemetry?.viewerBreakdown?.ca || 180} Guests
+                {streamData?.telemetry?.viewerBreakdown?.ca ?? 0} Guests
               </div>
               <div className="text-[10px] text-stone-400">Toronto, Vancouver, Brampton</div>
             </div>
@@ -1006,7 +1015,7 @@ export const LiveStreamBroadcastView: React.FC = () => {
                 🇦🇪 United Arab Emirates
               </div>
               <div className="text-lg font-bold text-amber-200">
-                {streamData?.telemetry?.viewerBreakdown?.ae || 290} Guests
+                {streamData?.telemetry?.viewerBreakdown?.ae ?? 0} Guests
               </div>
               <div className="text-[10px] text-stone-400">Dubai Marina, Abu Dhabi</div>
             </div>
@@ -1016,9 +1025,9 @@ export const LiveStreamBroadcastView: React.FC = () => {
                 🇮🇳 Domestic India
               </div>
               <div className="text-lg font-bold text-amber-200">
-                {streamData?.telemetry?.viewerBreakdown?.in || 640} Guests
+                {streamData?.telemetry?.viewerBreakdown?.in ?? 0} Guests
               </div>
-              <div className="text-[10px] text-stone-400">Delhi, Mumbai, Jaipur, Bangalore</div>
+              <div className="text-[10px] text-stone-400">Delhi, Mumbai, Bengaluru</div>
             </div>
           </div>
         </div>

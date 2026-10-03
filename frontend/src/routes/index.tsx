@@ -19,6 +19,7 @@ import { PhotoVaultView } from '../features/gallery/PhotoVaultView';
 import { GuestPhotoUploadView } from '../features/gallery/GuestPhotoUploadView';
 import { CheckinDeskView } from '../features/checkin/CheckinDeskView';
 import { LiveStreamBroadcastView } from '../features/livestream/LiveStreamBroadcastView';
+import { NotFoundView } from '../features/common/NotFoundView';
 
 export const router = createBrowserRouter([
   {
@@ -84,12 +85,18 @@ export const router = createBrowserRouter([
     ],
   },
   {
+    path: '/w',
+    element: <NotFoundView title="Wedding Slug Required" message="To view a royal wedding website, please provide the full wedding slug (e.g. /w/ananya-rahul) or establish your wedding in the dashboard." />,
+  },
+  {
     path: '/w/:slug',
     element: <PublicWeddingWebsiteView />,
+    errorElement: <NotFoundView />,
   },
   {
     path: '/w/:slug/live',
     element: <LiveStreamBroadcastView />,
+    errorElement: <NotFoundView />,
   },
   {
     path: '/w/:slug/upload-photos',
@@ -106,5 +113,9 @@ export const router = createBrowserRouter([
   {
     path: '/w/tok_:token',
     element: <PublicInvitationView />,
+  },
+  {
+    path: '*',
+    element: <NotFoundView title="Page Not Found (404)" message="The ceremony view, invite link, or dashboard page you requested does not exist." />,
   },
 ]);

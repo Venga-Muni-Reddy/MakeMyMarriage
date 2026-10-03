@@ -1,6 +1,7 @@
 import { weddingRepository } from './wedding.repository';
 import { CreateWeddingDTO, UpdateWeddingDTO } from './wedding.types';
 import prisma from '../../infrastructure/prisma/client';
+import { emailService } from '../../infrastructure/email/email.service';
 import {
   ConflictError,
   NotFoundError,
@@ -131,13 +132,81 @@ export class WeddingService {
       throw new ForbiddenError('Only the Sovereign Owner can bestow Owner privileges');
     }
 
-    return weddingRepository.inviteCollaborator(weddingId, payload.email, payload.roleName, {
+    const member = await weddingRepository.inviteCollaborator(weddingId, payload.email, payload.roleName, {
       name: payload.name,
       phone: payload.phone,
       relation: payload.relation,
       ceremonyScope: payload.ceremonyScope,
       personalNote: payload.personalNote,
     });
+
+    // Dispatch official email notification via SMTP
+    const wedding = await weddingRepository.findById(weddingId);
+    const weddingName = wedding?.name || 'Wedding Workspace';
+    const roleTitle = payload.roleName.replace('_', ' ');
+    const appUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const loginUrl = `${appUrl}/login?redirect=/dashboard/${weddingId}`;
+
+    try {
+      await emailService.sendEmail({
+        to: payload.email,
+        recipientName: payload.name || payload.email,
+        subject: `💍 Council Invitation: Appointed as ${roleTitle} for ${weddingName}`,
+        html: `
+          <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; background: #FFFDF9; border: 1px solid #E9E1DD; border-radius: 16px; overflow: hidden; color: #1E1B19;">
+            <div style="background: #780616; padding: 28px 24px; text-align: center; color: #FAF7F2;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #D4AF37; font-weight: bold;">Vivaha Council Invitation</span>
+              <h1 style="font-size: 26px; margin: 8px 0 0; font-family: 'Georgia', serif; font-weight: normal; color: #FFFFFF;">${weddingName}</h1>
+            </div>
+            <div style="padding: 32px 28px;">
+              <p style="font-size: 16px; line-height: 1.6; margin-top: 0;">Namaste <strong>${payload.name || 'Esteemed Collaborator'}</strong>,</p>
+              <p style="font-size: 14px; line-height: 1.6; color: #4B4643;">
+                You have been formally invited to join the inner planning council for <strong>${weddingName}</strong> as <strong>${roleTitle}</strong>.
+              </p>
+              ${payload.personalNote ? `
+                <div style="background: #FAF2EE; border-left: 3px solid #B32446; padding: 14px 18px; margin: 20px 0; border-radius: 0 8px 8px 0; font-style: italic; color: #4A4543; font-size: 13px;">
+                  "${payload.personalNote}"
+                </div>
+              ` : ''}
+              <div style="background: #FFFFFF; border: 1px solid #E9E1DD; border-radius: 12px; padding: 18px; margin: 24px 0;">
+                <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 6px 0; color: #78716C; width: 140px;">Assigned Role:</td>
+                    <td style="padding: 6px 0; font-weight: bold; color: #780616;">${roleTitle}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #78716C;">Ceremony Scope:</td>
+                    <td style="padding: 6px 0; font-weight: 500; color: #1E1B19;">${payload.ceremonyScope || 'All Ceremonies'}</td>
+                  </tr>
+                  ${payload.relation ? `
+                  <tr>
+                    <td style="padding: 6px 0; color: #78716C;">Designation:</td>
+                    <td style="padding: 6px 0; font-weight: 500; color: #1E1B19;">${payload.relation}</td>
+                  </tr>
+                  ` : ''}
+                </table>
+              </div>
+              <div style="text-align: center; margin: 32px 0 16px;">
+                <a href="${loginUrl}" style="display: inline-block; background: #B32446; color: #FFFFFF; padding: 14px 32px; border-radius: 10px; font-weight: bold; text-decoration: none; font-size: 14px; letter-spacing: 0.5px;">
+                  Access Wedding Workspace ✦
+                </a>
+              </div>
+              <p style="text-align: center; font-size: 12px; color: #8C827A; margin-top: 16px;">
+                Log in with <strong>${payload.email}</strong> to collaborate on schedules, ceremonies, checklists, and team coordination.
+              </p>
+            </div>
+            <div style="background: #FAF2EE; padding: 16px; text-align: center; font-size: 11px; color: #78716C; border-top: 1px solid #E9E1DD;">
+              MakeMyMarriage Council Governance • Sovereign Vivaha Protocol
+            </div>
+          </div>
+        `,
+        text: `You have been invited to join the planning council for ${weddingName} as ${roleTitle}. Access the workspace at ${loginUrl}`,
+      });
+    } catch (err: any) {
+      console.error('Failed to dispatch collaborator invitation email:', err?.message || err);
+    }
+
+    return member;
   }
 
   async updateCollaborator(
@@ -181,7 +250,53 @@ export class WeddingService {
       throw new ForbiddenError('You do not have access to this wedding workspace');
     }
 
-    return weddingRepository.resendInviteRecord(weddingId, memberId);
+    const updated = await weddingRepository.resendInviteRecord(weddingId, memberId);
+
+    // Dispatch email
+    const wedding = await weddingRepository.findById(weddingId);
+    const weddingName = wedding?.name || 'Wedding Workspace';
+    const roleTitle = updated.role.name.replace('_', ' ');
+    const appUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const loginUrl = `${appUrl}/login?redirect=/dashboard/${weddingId}`;
+
+    try {
+      await emailService.sendEmail({
+        to: updated.user.email,
+        recipientName: updated.user.name || updated.user.email,
+        subject: `💍 Council Passkey: Access Invitation for ${weddingName}`,
+        html: `
+          <div style="font-family: 'Georgia', serif; max-width: 600px; margin: 0 auto; background: #FFFDF9; border: 1px solid #E9E1DD; border-radius: 16px; overflow: hidden; color: #1E1B19;">
+            <div style="background: #780616; padding: 28px 24px; text-align: center; color: #FAF7F2;">
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #D4AF37; font-weight: bold;">Vivaha Council Passkey</span>
+              <h1 style="font-size: 26px; margin: 8px 0 0; font-family: 'Georgia', serif; font-weight: normal; color: #FFFFFF;">${weddingName}</h1>
+            </div>
+            <div style="padding: 32px 28px;">
+              <p style="font-size: 16px; line-height: 1.6; margin-top: 0;">Namaste <strong>${updated.user.name || 'Esteemed Collaborator'}</strong>,</p>
+              <p style="font-size: 14px; line-height: 1.6; color: #4B4643;">
+                Your invitation passkey to join the inner planning council for <strong>${weddingName}</strong> as <strong>${roleTitle}</strong> has been refreshed.
+              </p>
+              <div style="text-align: center; margin: 32px 0 16px;">
+                <a href="${loginUrl}" style="display: inline-block; background: #B32446; color: #FFFFFF; padding: 14px 32px; border-radius: 10px; font-weight: bold; text-decoration: none; font-size: 14px; letter-spacing: 0.5px;">
+                  Access Wedding Workspace ✦
+                </a>
+              </div>
+              <p style="text-align: center; font-size: 12px; color: #8C827A; margin-top: 16px;">
+                Log in with <strong>${updated.user.email}</strong> to collaborate on schedules, ceremonies, checklists, and team coordination.
+              </p>
+            </div>
+          </div>
+        `,
+        text: `Your invitation passkey for ${weddingName} (${roleTitle}) has been refreshed. Access the workspace at ${loginUrl}`,
+      });
+    } catch (err: any) {
+      console.error('Failed to dispatch collaborator passkey email:', err?.message || err);
+    }
+
+    return updated;
+  }
+
+  async acceptInvitation(weddingId: string, currentUserId: string) {
+    return weddingRepository.acceptMemberInvitation(weddingId, currentUserId);
   }
 
   async seedImperialCouncil(weddingId: string, currentUserId: string) {

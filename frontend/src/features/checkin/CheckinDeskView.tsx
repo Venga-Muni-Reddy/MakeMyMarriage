@@ -29,42 +29,28 @@ import {
   CheckInTelemetry,
   CheckInLedgerItem,
 } from '../../services/checkin.service';
+import { eventService, WeddingEvent } from '../../services/event.service';
 import { useWedding } from '../../context/WeddingContext';
 
 export const CheckinDeskView: React.FC = () => {
   const { weddingId } = useParams<{ weddingId: string }>();
   const { currentWedding } = useWedding();
-  const activeWeddingId = weddingId || currentWedding?.id || 'f238b9ec-9c7f-41d3-8885-0080ae24a462';
+  const activeWeddingId = weddingId || currentWedding?.id || '';
 
   // Audio & Hardware states
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [activeGate, setActiveGate] = useState('Gate 1 — Royal Porch');
-  const [selectedCeremony, setSelectedCeremony] = useState('Sacred Muhurtham • Grand Mandap Lawn');
+  const [events, setEvents] = useState<WeddingEvent[]>([]);
+  const [selectedCeremony, setSelectedCeremony] = useState('');
 
   // Scanner & Search states
   const [manualCode, setManualCode] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [laserPos, setLaserPos] = useState(25);
 
-  // Verification Dossier state
-  const [dossier, setDossier] = useState<GuestVerificationDossier>({
-    status: 'ACCESS_GRANTED',
-    guestId: 'demo-guest-9821',
-    name: 'Dr. Vikramaditya Rathore & Family',
-    initials: 'VR',
-    title: 'Senior Surgeon, Mewar Medical Council',
-    category: "VIP Dignitary • Groom's Family Side",
-    isVip: true,
-    phone: '+91 98290 14412',
-    passToken: 'MM-VIV-9821',
-    headcount: 3,
-    companions: ['Mrs. Sunita Rathore', 'Aryan Rathore'],
-    assignedTable: 'Table 4 — Peacock Pavilion',
-    zone: 'Grand Mandap Front View • Zone A',
-    foodPreference: 'Strict Jain (No Onion / Garlic / Root Vegetables)',
-    dietaryNotes: 'Strict Jain — 2 Meals, 1 Regular Vegetarian',
-  });
+  // Verification Dossier state (starts null awaiting scan)
+  const [dossier, setDossier] = useState<GuestVerificationDossier | null>(null);
 
   // Telemetry & Ledger states
   const [telemetry, setTelemetry] = useState<CheckInTelemetry | null>(null);
@@ -133,16 +119,21 @@ export const CheckinDeskView: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch initial telemetry and ledger
+  // Fetch initial telemetry, ledger, and wedding events
   const loadData = async () => {
     if (!activeWeddingId) return;
     try {
-      const [tStats, lItems] = await Promise.all([
+      const [tStats, lItems, wEvents] = await Promise.all([
         checkinService.getTelemetry(activeWeddingId),
         checkinService.getLedger(activeWeddingId, ledgerFilter),
+        eventService.getEvents(activeWeddingId).catch(() => []),
       ]);
       setTelemetry(tStats);
       setLedger(lItems);
+      setEvents(wEvents);
+      if (wEvents.length > 0) {
+        setSelectedCeremony((prev) => prev || wEvents[0].name);
+      }
     } catch (err) {
       console.error('Failed to load check-in data:', err);
     }
@@ -186,7 +177,7 @@ export const CheckinDeskView: React.FC = () => {
         guestId: dossier.guestId,
         attendeeCount: dossier.headcount,
         gateName: activeGate,
-        usherName: 'Muni Reddy',
+        usherName: 'Lead Concierge',
       });
 
       if (result.isDuplicate) {
@@ -203,38 +194,6 @@ export const CheckinDeskView: React.FC = () => {
     } catch (err: any) {
       showToast('Error', err?.message || 'Could not record check-in', false);
     }
-  };
-
-  // Simulate Valid VIP Scan
-  const handleSimulateVip = () => {
-    handleVerify('9821');
-  };
-
-  // Simulate Duplicate Warning
-  const handleSimulateDuplicate = () => {
-    setDossier({
-      status: 'ALREADY_CHECKED_IN',
-      guestId: 'demo-dup-4412',
-      name: 'Mrs. Manjula Devi Shekhawat',
-      initials: 'MS',
-      title: 'Honorary Member, Mewar Trust',
-      category: 'VIP Royal Family Guest',
-      isVip: true,
-      phone: '+91 98291 88711',
-      passToken: 'MM-VIV-4412',
-      headcount: 2,
-      companions: ['Harshvardhan Shekhawat'],
-      assignedTable: 'Table 2 — Peacock Pavilion',
-      zone: 'Grand Mandap Front View',
-      foodPreference: 'Traditional Vegetarian',
-      previousCheckIn: {
-        checkedInAt: '19:42:15 PM',
-        gateName: 'Gate 2 — Lake Promenade',
-        usherName: 'Captain Shailesh Mehta',
-      },
-      warningMessage: 'Warning: This pass was authenticated at 19:42:15 PM at Gate 2. Anti-Passback protocol triggered.',
-    });
-    showToast('Duplicate Pass Flagged', 'Pass was already authenticated at Gate 2. Avoid duplicate entry.', false);
   };
 
   // Manual Walk-in Submit
@@ -354,10 +313,15 @@ export const CheckinDeskView: React.FC = () => {
                   onChange={(e) => setSelectedCeremony(e.target.value)}
                   className="appearance-none cursor-pointer bg-[#FAF2EE] pl-3.5 pr-8 py-2 rounded-xl text-xs font-semibold text-[#1E1B19] border border-[#E9E1DD] shadow-sm focus:outline-none focus:border-[#BF8E42]"
                 >
-                  <option>Sacred Muhurtham • Grand Mandap Lawn</option>
-                  <option>Sangeet Night • Jagmandir Island Courtyard</option>
-                  <option>Grand Royal Reception • Zenana Mahal</option>
-                  <option>Haldi Radiance • Poolside Promenade</option>
+                  {events.length > 0 ? (
+                    events.map((ev) => (
+                      <option key={ev.id} value={ev.name}>
+                        {ev.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="Main Wedding Ceremony">Main Wedding Ceremony</option>
+                  )}
                 </select>
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-stone-500 text-xs">
                   ▼
@@ -426,19 +390,19 @@ export const CheckinDeskView: React.FC = () => {
               <div className="mt-3">
                 <div className="flex items-baseline gap-2">
                   <span className="font-serif text-2xl sm:text-3xl font-bold text-[#1E1B19]">
-                    {telemetry?.totalExpected || 350}
+                    {telemetry?.totalExpected ?? 0}
                   </span>
                   <span className="text-xs text-[#827566]">Royal Invites</span>
                 </div>
                 <div className="w-full bg-[#FAF2EE] rounded-full h-1.5 mt-3 overflow-hidden">
                   <div
                     className="bg-[#BF8E42] h-1.5 rounded-full transition-all duration-700"
-                    style={{ width: `${telemetry?.attendancePace || 55}%` }}
+                    style={{ width: `${telemetry?.attendancePace ?? 0}%` }}
                   ></div>
                 </div>
                 <p className="text-[11px] text-[#827566] mt-2 flex justify-between">
                   <span>Overall Pace</span>
-                  <span className="font-bold text-[#1E1B19]">{telemetry?.attendancePace || 55}% Registered</span>
+                  <span className="font-bold text-[#1E1B19]">{telemetry?.attendancePace ?? 0}% Registered</span>
                 </p>
               </div>
             </div>
@@ -449,20 +413,20 @@ export const CheckinDeskView: React.FC = () => {
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#827566]">Welcomed & Inside</span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                  +1 Just Now
+                  {telemetry?.totalWelcomed ? `${telemetry.totalWelcomed} Inside` : 'Gate Ready'}
                 </span>
               </div>
               <div className="mt-3">
                 <div className="flex items-baseline gap-2">
                   <span className="font-serif text-2xl sm:text-3xl font-bold text-[#1E1B19]">
-                    {telemetry?.totalWelcomed || 192}
+                    {telemetry?.totalWelcomed ?? 0}
                   </span>
-                  <span className="text-xs font-semibold text-[#7F560C]">Headcount in Mandap</span>
+                  <span className="text-xs font-semibold text-[#7F560C]">Headcount Welcomed</span>
                 </div>
                 <p className="text-[11px] text-[#827566] mt-3 flex items-center gap-1">
                   <CheckCircle className="w-3.5 h-3.5 text-[#7F560C]" />
                   <span>
-                    Avg. gate turnaround: <strong className="text-[#1E1B19]">6.4s per family</strong>
+                    Avg. gate turnaround: <strong className="text-[#1E1B19]">{telemetry?.avgTurnaroundSeconds ? `${telemetry.avgTurnaroundSeconds}s per family` : 'Ready'}</strong>
                   </span>
                 </p>
               </div>
@@ -479,14 +443,20 @@ export const CheckinDeskView: React.FC = () => {
               <div className="mt-3">
                 <div className="flex items-baseline gap-2">
                   <span className="font-serif text-2xl sm:text-3xl font-bold text-[#BF8E42]">
-                    {telemetry?.totalVipArrived || 28}{' '}
-                    <span className="text-base font-normal text-[#827566]">/ {telemetry?.totalVipExpected || 32}</span>
+                    {telemetry?.totalVipArrived ?? 0}{' '}
+                    <span className="text-base font-normal text-[#827566]">/ {telemetry?.totalVipExpected ?? 0}</span>
                   </span>
-                  <span className="text-[11px] px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">87.5%</span>
+                  <span className="text-[11px] px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">
+                    {telemetry?.totalVipExpected ? Math.round(((telemetry?.totalVipArrived ?? 0) / telemetry.totalVipExpected) * 100) : 0}%
+                  </span>
                 </div>
                 <p className="text-[11px] text-[#780616] font-medium mt-3 flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" />
-                  <span>4 Royal Suites pending transit</span>
+                  <span>
+                    {telemetry?.totalVipExpected
+                      ? `${Math.max(0, (telemetry.totalVipExpected - (telemetry.totalVipArrived ?? 0)))} VIPs pending transit`
+                      : 'All VIPs recorded'}
+                  </span>
                 </p>
               </div>
             </div>
@@ -506,18 +476,18 @@ export const CheckinDeskView: React.FC = () => {
               <div className="mt-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-2 py-0.5 rounded-md bg-[#FAF2EE] text-xs font-bold text-[#1E1B19]">
-                    {telemetry?.dietaryCounts?.jain || 42} Jain
+                    {telemetry?.dietaryCounts?.jain ?? 0} Jain
                   </span>
                   <span className="px-2 py-0.5 rounded-md bg-[#FAF2EE] text-xs font-bold text-[#1E1B19]">
-                    {telemetry?.dietaryCounts?.vegan || 14} Vegan
+                    {telemetry?.dietaryCounts?.vegan ?? 0} Vegan
                   </span>
                   <span className="px-2 py-0.5 rounded-md bg-[#FAF2EE] text-xs font-bold text-[#1E1B19]">
-                    {telemetry?.dietaryCounts?.halal || 6} Halal
+                    {telemetry?.dietaryCounts?.halal ?? 0} Halal
                   </span>
                 </div>
                 <p className="text-[11px] text-[#827566] mt-3 flex items-center gap-1 truncate">
                   <UtensilsCrossed className="w-3.5 h-3.5 text-[#BF8E42]" />
-                  <span>Royal Maharajas Pavilions notified</span>
+                  <span>Banquet kitchen synchronized</span>
                 </p>
               </div>
             </div>
@@ -577,7 +547,7 @@ export const CheckinDeskView: React.FC = () => {
                     <QrCode className="w-20 h-20 text-[#1E1B19]" />
                   </div>
                   <span className="font-mono text-xs font-bold text-[#7F560C] tracking-widest">
-                    {dossier?.passToken || 'MM-VIV-9821'}
+                    {dossier?.passToken || 'SCAN-GATE-PASS'}
                   </span>
                   <span className="text-[10px] text-[#827566] uppercase tracking-wider font-semibold">
                     Align inside frame
@@ -646,7 +616,7 @@ export const CheckinDeskView: React.FC = () => {
                       value={manualCode}
                       onChange={(e) => setManualCode(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleVerify(manualCode)}
-                      placeholder="Pass Token (e.g. 9821) or 10-digit Phone..."
+                      placeholder="Pass Token (e.g. MMM-9B9DA) or 10-digit Phone..."
                       className="w-full bg-[#FAF2EE] px-3.5 py-2.5 rounded-xl text-xs text-[#1E1B19] placeholder:text-[#827566]/60 border border-[#E9E1DD] focus:outline-none focus:border-[#BF8E42]"
                     />
                   </div>
@@ -662,25 +632,25 @@ export const CheckinDeskView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Quick Test Diagnostics */}
+              {/* Quick Test Shortcuts for Active Guests */}
               <div className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-[#E9E1DD] flex flex-col gap-2">
                 <span className="text-[10px] uppercase tracking-wider font-bold text-[#827566]">
-                  Gate Attendant Diagnostics & Tools
+                  Gate Attendant Quick Verification
                 </span>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={handleSimulateVip}
+                    onClick={() => handleVerify('9676257312')}
                     className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#FAF2EE] text-[#7F560C] text-xs font-bold border border-[#E9E1DD] transition-all shadow-sm flex items-center gap-1"
                   >
-                    <span>⚡ Simulate Valid VIP Scan</span>
+                    <span>⚡ Verify Premnath V</span>
                   </button>
                   <button
                     type="button"
-                    onClick={handleSimulateDuplicate}
+                    onClick={() => handleVerify('1234567890')}
                     className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#FAF2EE] text-[#780616] text-xs font-bold border border-[#E9E1DD] transition-all shadow-sm flex items-center gap-1"
                   >
-                    <span>⚠️ Duplicate Warning Test</span>
+                    <span>⚡ Verify Uma Saribala</span>
                   </button>
                   <button
                     type="button"
@@ -696,210 +666,247 @@ export const CheckinDeskView: React.FC = () => {
 
           {/* RIGHT COLUMN: Instant Guest Verification Dossier & Gate Clearance (7 Cols) */}
           <div className="lg:col-span-7 flex flex-col gap-5">
-            <div className="p-6 sm:p-7 rounded-3xl bg-white border border-[#E9E1DD] shadow-md flex flex-col gap-6 relative overflow-hidden">
-              {/* Verification Status Banner */}
-              <div
-                className={`flex items-center justify-between p-4 rounded-2xl transition-colors ${
-                  dossier?.status === 'ACCESS_GRANTED'
-                    ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-                    : dossier?.status === 'ALREADY_CHECKED_IN'
-                    ? 'bg-amber-50 border border-amber-200 text-amber-800'
-                    : 'bg-red-50 border border-red-200 text-red-800'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  {dossier?.status === 'ACCESS_GRANTED' ? (
-                    <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0" />
-                  ) : dossier?.status === 'ALREADY_CHECKED_IN' ? (
-                    <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0" />
-                  ) : (
-                    <X className="w-6 h-6 text-red-600 shrink-0" />
-                  )}
-                  <div>
-                    <span className="font-bold text-xs uppercase tracking-wider block">
-                      {dossier?.status === 'ACCESS_GRANTED'
-                        ? 'ACCESS GRANTED • VERIFIED ROYAL PASS'
-                        : dossier?.status === 'ALREADY_CHECKED_IN'
-                        ? 'ALREADY CHECKED IN • DUPLICATE WARNING'
-                        : 'INVALID OR UNRECOGNIZED PASS'}
-                    </span>
-                    <span className="text-[11px] text-[#827566]">
-                      {dossier?.status === 'ACCESS_GRANTED'
-                        ? 'Digital Token authenticated against Mewar Guest Registry'
-                        : dossier?.status === 'ALREADY_CHECKED_IN'
-                        ? `Scanned previously at ${dossier.previousCheckIn?.checkedInAt} via ${dossier.previousCheckIn?.gateName}`
-                        : 'Please check pass token spelling or register walk-in'}
-                    </span>
-                  </div>
+            {!dossier ? (
+              <div className="p-10 rounded-3xl bg-white border border-[#E9E1DD] shadow-md flex flex-col items-center justify-center text-center gap-4 min-h-[460px]">
+                <div className="w-16 h-16 rounded-2xl bg-[#FAF2EE] border border-[#E9E1DD] flex items-center justify-center text-[#BF8E42] shadow-sm">
+                  <QrCode className="w-8 h-8" />
                 </div>
-                <span className="font-serif text-sm font-bold tracking-tight px-3 py-1 rounded-xl bg-white shadow-sm border border-stone-200">
-                  {dossier?.status === 'ACCESS_GRANTED'
-                    ? 'GATE CLEAR'
-                    : dossier?.status === 'ALREADY_CHECKED_IN'
-                    ? 'PREVENTED'
-                    : 'REJECTED'}
-                </span>
-              </div>
-
-              {/* Guest Identity Summary */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  {/* Avatar Monogram with Luxury Foil Look */}
-                  <div className="relative w-16 h-16 rounded-full bg-gradient-to-tr from-[#7F560C] via-[#BF8E42] to-[#F4BD6C] flex items-center justify-center text-white font-serif text-xl font-bold shadow-md shrink-0 border border-white">
-                    <span>{dossier?.initials || 'VR'}</span>
-                    <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow border border-[#E9E1DD]">
-                      <Crown className="w-3.5 h-3.5 text-[#BF8E42]" />
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#1E1B19]">
-                      {dossier?.name || 'Dr. Vikramaditya Rathore & Family'}
-                    </h3>
-                    <p className="text-xs text-[#827566] mt-0.5">
-                      {dossier?.title || 'Senior Surgeon, Mewar Medical Council'}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#FAF2EE] text-[#7F560C] text-[11px] font-bold border border-[#E9E1DD] flex items-center gap-1">
-                        <Crown className="w-3 h-3 text-[#BF8E42]" />
-                        <span>{dossier?.category || "VIP Dignitary • Groom's Family Side"}</span>
-                      </span>
-                      <span className="text-[#827566] text-xs">•</span>
-                      <span className="text-xs text-[#827566] font-medium">Udaipur Royal Circle</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* QR Mini Preview Pill */}
-                <div className="flex sm:flex-col items-end justify-between sm:justify-center p-3 rounded-xl bg-[#FAF2EE] border border-[#E9E1DD] shrink-0 gap-1 text-right">
-                  <span className="text-[10px] uppercase tracking-wider text-[#827566] font-bold">Pass Identifier</span>
-                  <span className="font-mono text-sm font-bold text-[#1E1B19]">{dossier?.passToken}</span>
-                  <span className="text-[10px] text-emerald-700 font-bold">WhatsApp Verified</span>
-                </div>
-              </div>
-
-              {/* Pass Details 4-Metric Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {/* Box 1: Headcount */}
-                <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E9E1DD] flex flex-col justify-between gap-2">
-                  <div className="flex items-center justify-between text-[#827566]">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Accompanying Count</span>
-                    <Users className="w-4 h-4 text-[#7F560C]" />
-                  </div>
-                  <div>
-                    <p className="font-serif text-lg font-bold text-[#1E1B19]">
-                      {dossier?.headcount} Guests{' '}
-                      <span className="text-xs font-normal text-[#827566]">(Primary + {dossier.headcount - 1})</span>
-                    </p>
-                    <p className="text-xs text-[#827566] mt-0.5 truncate">
-                      {dossier?.companions?.join(', ') || 'Mrs. Sunita Rathore, Aryan Rathore'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Box 2: Assigned Seating */}
-                <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E9E1DD] flex flex-col justify-between gap-2">
-                  <div className="flex items-center justify-between text-[#827566]">
-                    <span className="text-[11px] font-bold uppercase tracking-wider">Assigned Pavilion Table</span>
-                    <button
-                      type="button"
-                      onClick={() => showToast('Seating Map', 'Table 4 is located front-left of the Sacred Mandap', true)}
-                      className="text-[#7F560C] hover:underline text-[11px] font-bold flex items-center gap-0.5"
-                    >
-                      <span>View Map</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-[#BF8E42]" />
-                      <p className="font-serif text-lg font-bold text-[#1E1B19]">{dossier?.assignedTable}</p>
-                    </div>
-                    <p className="text-xs text-[#827566] mt-0.5">{dossier?.zone || 'Grand Mandap Front View • Zone A'}</p>
-                  </div>
-                </div>
-
-                {/* Box 3: Dietary Protocol Alert */}
-                <div className="sm:col-span-2 p-4 rounded-2xl bg-[#FAF2EE] border border-[#E9E1DD] flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <UtensilsCrossed className="w-4 h-4 text-[#BF8E42]" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#1E1B19]">
-                        Kitchen Dietary Protocol Flagged
-                      </span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
-                      Chef Action Queued
-                    </span>
-                  </div>
-                  <p className="text-xs sm:text-sm font-semibold text-[#1E1B19]">
-                    {dossier?.foodPreference || 'Strict Jain (No Onion / Garlic / Root Vegetables)'}
-                  </p>
-                  <p className="text-[11px] text-[#827566]">
-                    Banquet Captain <strong className="text-[#1E1B19]">Mahesh Panwar</strong> has been notified via
-                    Kitchen Display Unit 3.
+                <div>
+                  <h3 className="font-serif text-xl font-bold text-[#1E1B19]">Awaiting Gate Pass Verification</h3>
+                  <p className="text-xs text-[#827566] max-w-md mt-1 leading-relaxed">
+                    Scan a guest's QR Gate Pass with the optical sensor on the left, or search using their registered mobile number or pass token.
                   </p>
                 </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleVerify('9676257312')}
+                    className="px-3.5 py-2 rounded-xl bg-[#FAF2EE] hover:bg-[#F4ECE8] text-[#7F560C] text-xs font-bold border border-[#E9E1DD] transition-all shadow-sm flex items-center gap-1.5"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-[#BF8E42]" />
+                    <span>Quick Scan: Shri Premnath V</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleVerify('1234567890')}
+                    className="px-3.5 py-2 rounded-xl bg-[#FAF2EE] hover:bg-[#F4ECE8] text-[#780616] text-xs font-bold border border-[#E9E1DD] transition-all shadow-sm flex items-center gap-1.5"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-[#780616]" />
+                    <span>Quick Scan: Shri Uma Saribala</span>
+                  </button>
+                </div>
               </div>
+            ) : (
+              <div className="p-6 sm:p-7 rounded-3xl bg-white border border-[#E9E1DD] shadow-md flex flex-col gap-6 relative overflow-hidden">
+                {/* Verification Status Banner */}
+                <div
+                  className={`flex items-center justify-between p-4 rounded-2xl transition-colors ${
+                    dossier.status === 'ACCESS_GRANTED'
+                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                      : dossier.status === 'ALREADY_CHECKED_IN'
+                      ? 'bg-amber-50 border border-amber-200 text-amber-800'
+                      : 'bg-red-50 border border-red-200 text-red-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {dossier.status === 'ACCESS_GRANTED' ? (
+                      <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0" />
+                    ) : dossier.status === 'ALREADY_CHECKED_IN' ? (
+                      <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0" />
+                    ) : (
+                      <X className="w-6 h-6 text-red-600 shrink-0" />
+                    )}
+                    <div>
+                      <span className="font-bold text-xs uppercase tracking-wider block">
+                        {dossier.status === 'ACCESS_GRANTED'
+                          ? 'ACCESS GRANTED • VERIFIED GUEST PASS'
+                          : dossier.status === 'ALREADY_CHECKED_IN'
+                          ? 'ALREADY CHECKED IN • DUPLICATE WARNING'
+                          : 'INVALID OR UNRECOGNIZED PASS'}
+                      </span>
+                      <span className="text-[11px] text-[#827566]">
+                        {dossier.status === 'ACCESS_GRANTED'
+                          ? 'Pass token authenticated against active wedding registry'
+                          : dossier.status === 'ALREADY_CHECKED_IN'
+                          ? `Scanned previously at ${dossier.previousCheckIn?.checkedInAt} via ${dossier.previousCheckIn?.gateName}`
+                          : 'Please check pass token spelling or register walk-in'}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="font-serif text-sm font-bold tracking-tight px-3 py-1 rounded-xl bg-white shadow-sm border border-stone-200">
+                    {dossier.status === 'ACCESS_GRANTED'
+                      ? 'GATE CLEAR'
+                      : dossier.status === 'ALREADY_CHECKED_IN'
+                      ? 'PREVENTED'
+                      : 'REJECTED'}
+                  </span>
+                </div>
 
-              {/* Gate Security & Anti-Passback Audit Badge */}
-              <div className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-[#E9E1DD] flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <ShieldCheck className="w-5 h-5 text-[#7F560C]" />
-                  <div>
-                    <span className="text-xs font-bold text-[#1E1B19] block">Anti-Passback Protocol Active</span>
-                    <span className="text-[11px] text-[#827566]">
-                      Pass locks post-entry to prevent duplicate gate entry attempts.
-                    </span>
+                {/* Guest Identity Summary */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    {/* Avatar Monogram with Luxury Foil Look */}
+                    <div className="relative w-16 h-16 rounded-full bg-gradient-to-tr from-[#7F560C] via-[#BF8E42] to-[#F4BD6C] flex items-center justify-center text-white font-serif text-xl font-bold shadow-md shrink-0 border border-white">
+                      <span>{dossier.initials || 'G'}</span>
+                      {dossier.isVip && (
+                        <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow border border-[#E9E1DD]">
+                          <Crown className="w-3.5 h-3.5 text-[#BF8E42]" />
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#1E1B19]">
+                        {dossier.name}
+                      </h3>
+                      <p className="text-xs text-[#827566] mt-0.5">
+                        {dossier.title || 'Wedding Invitee'}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#FAF2EE] text-[#7F560C] text-[11px] font-bold border border-[#E9E1DD] flex items-center gap-1">
+                          {dossier.isVip && <Crown className="w-3 h-3 text-[#BF8E42]" />}
+                          <span>{dossier.category || 'Wedding Guest'}</span>
+                        </span>
+                        <span className="text-[#827566] text-xs">•</span>
+                        <span className="text-xs text-[#827566] font-medium">{coupleTitle} Guest Registry</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* QR Mini Preview Pill */}
+                  <div className="flex sm:flex-col items-end justify-between sm:justify-center p-3 rounded-xl bg-[#FAF2EE] border border-[#E9E1DD] shrink-0 gap-1 text-right">
+                    <span className="text-[10px] uppercase tracking-wider text-[#827566] font-bold">Pass Identifier</span>
+                    <span className="font-mono text-sm font-bold text-[#1E1B19]">{dossier.passToken}</span>
+                    <span className="text-[10px] text-emerald-700 font-bold">Verified</span>
                   </div>
                 </div>
-                <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-white border border-[#E9E1DD] text-[#7F560C] shadow-sm whitespace-nowrap">
-                  Status: {dossier?.status === 'ALREADY_CHECKED_IN' ? 'PREVIOUSLY SCANNED' : 'UNUSED'}
-                </span>
+
+                {/* Pass Details 4-Metric Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Box 1: Headcount */}
+                  <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E9E1DD] flex flex-col justify-between gap-2">
+                    <div className="flex items-center justify-between text-[#827566]">
+                      <span className="text-[11px] font-bold uppercase tracking-wider">Accompanying Count</span>
+                      <Users className="w-4 h-4 text-[#7F560C]" />
+                    </div>
+                    <div>
+                      <p className="font-serif text-lg font-bold text-[#1E1B19]">
+                        {dossier.headcount} Guests{' '}
+                        {dossier.headcount > 1 && (
+                          <span className="text-xs font-normal text-[#827566]">(Primary + {dossier.headcount - 1})</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-[#827566] mt-0.5 truncate">
+                        {dossier.companions?.length ? dossier.companions.join(', ') : 'Attending Solo'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Box 2: Assigned Seating */}
+                  <div className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E9E1DD] flex flex-col justify-between gap-2">
+                    <div className="flex items-center justify-between text-[#827566]">
+                      <span className="text-[11px] font-bold uppercase tracking-wider">Assigned Table / Zone</span>
+                      <button
+                        type="button"
+                        onClick={() => showToast('Seating Area', `${dossier.assignedTable} reserved for party`, true)}
+                        className="text-[#7F560C] hover:underline text-[11px] font-bold flex items-center gap-0.5"
+                      >
+                        <span>Seating Details</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-[#BF8E42]" />
+                        <p className="font-serif text-lg font-bold text-[#1E1B19]">{dossier.assignedTable}</p>
+                      </div>
+                      <p className="text-xs text-[#827566] mt-0.5">{dossier.zone || 'Main Ceremony Seating'}</p>
+                    </div>
+                  </div>
+
+                  {/* Box 3: Dietary Protocol Alert */}
+                  <div className="sm:col-span-2 p-4 rounded-2xl bg-[#FAF2EE] border border-[#E9E1DD] flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <UtensilsCrossed className="w-4 h-4 text-[#BF8E42]" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#1E1B19]">
+                          Dietary Protocol
+                        </span>
+                      </div>
+                      {dossier.foodPreference && (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                          Preference Recorded
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs sm:text-sm font-semibold text-[#1E1B19]">
+                      {dossier.foodPreference || 'Standard Wedding Feast'}
+                    </p>
+                    <p className="text-[11px] text-[#827566]">
+                      Banquet catering captain has access to these preferences for table service.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Gate Security & Anti-Passback Audit Badge */}
+                <div className="p-3.5 rounded-2xl bg-[#FAF7F2] border border-[#E9E1DD] flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <ShieldCheck className="w-5 h-5 text-[#7F560C]" />
+                    <div>
+                      <span className="text-xs font-bold text-[#1E1B19] block">Anti-Passback Protocol Active</span>
+                      <span className="text-[11px] text-[#827566]">
+                        Pass locks post-entry to prevent duplicate gate entry attempts.
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-xl bg-white border border-[#E9E1DD] text-[#7F560C] shadow-sm whitespace-nowrap">
+                    Status: {dossier.status === 'ALREADY_CHECKED_IN' ? 'PREVIOUSLY SCANNED' : 'READY TO ADMIT'}
+                  </span>
+                </div>
+
+                {/* Large One-Tap Gate Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  {/* Primary Clearance CTA */}
+                  <button
+                    type="button"
+                    onClick={handleConfirmEntry}
+                    disabled={dossier.status === 'ALREADY_CHECKED_IN'}
+                    className="flex-1 py-4 px-6 rounded-2xl bg-[#780616] text-white font-serif text-sm sm:text-base font-bold uppercase tracking-wider shadow-lg hover:bg-[#8B081A] transition-all flex items-center justify-center gap-2.5 active:scale-[0.99] disabled:opacity-50"
+                  >
+                    <UserCheck className="w-5 h-5" />
+                    <span>Confirm Entry & Welcome ({dossier.headcount || 1} Guests)</span>
+                  </button>
+
+                  {/* Secondary Royal Escort Button */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      showToast('Escort Assigned', `Concierge assigned to escort ${dossier.name} to ${dossier.assignedTable}`, true)
+                    }
+                    className="py-4 px-5 rounded-2xl bg-[#FAF2EE] hover:bg-[#F4ECE8] text-[#1E1B19] text-xs font-bold uppercase tracking-wider border border-[#E9E1DD] transition-all flex items-center justify-center gap-2 shrink-0"
+                  >
+                    <Crown className="w-4 h-4 text-[#BF8E42]" />
+                    <span>Assign Escort</span>
+                  </button>
+
+                  {/* WhatsApp Dispatch Button */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      showToast(
+                        'Welcome Dispatch Sent',
+                        `Table welcome guide sent to ${dossier.name}`,
+                        true
+                      )
+                    }
+                    className="p-4 rounded-2xl bg-[#FAF2EE] hover:bg-[#F4ECE8] text-[#7F560C] border border-[#E9E1DD] transition-all flex items-center justify-center shrink-0"
+                    title="Dispatch Table Welcome"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-
-              {/* Large One-Tap Gate Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                {/* Primary Clearance CTA */}
-                <button
-                  type="button"
-                  onClick={handleConfirmEntry}
-                  disabled={dossier?.status === 'ALREADY_CHECKED_IN'}
-                  className="flex-1 py-4 px-6 rounded-2xl bg-[#780616] text-white font-serif text-sm sm:text-base font-bold uppercase tracking-wider shadow-lg hover:bg-[#8B081A] transition-all flex items-center justify-center gap-2.5 active:scale-[0.99] disabled:opacity-50"
-                >
-                  <UserCheck className="w-5 h-5" />
-                  <span>Confirm Entry & Welcome ({dossier?.headcount || 1} Guests)</span>
-                </button>
-
-                {/* Secondary Royal Escort Button */}
-                <button
-                  type="button"
-                  onClick={() =>
-                    showToast('Royal Escort Assigned', 'Butler Vikram assigned to escort guests to Peacock Pavilion', true)
-                  }
-                  className="py-4 px-5 rounded-2xl bg-[#FAF2EE] hover:bg-[#F4ECE8] text-[#1E1B19] text-xs font-bold uppercase tracking-wider border border-[#E9E1DD] transition-all flex items-center justify-center gap-2 shrink-0"
-                >
-                  <Crown className="w-4 h-4 text-[#BF8E42]" />
-                  <span>Assign Royal Escort</span>
-                </button>
-
-                {/* WhatsApp Dispatch Button */}
-                <button
-                  type="button"
-                  onClick={() =>
-                    showToast(
-                      'Welcome WhatsApp Dispatched',
-                      `Table welcome guide sent to ${dossier?.name || 'guest'}`,
-                      true
-                    )
-                  }
-                  className="p-4 rounded-2xl bg-[#FAF2EE] hover:bg-[#F4ECE8] text-[#7F560C] border border-[#E9E1DD] transition-all flex items-center justify-center shrink-0"
-                  title="Dispatch Table Welcome via WhatsApp"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </section>
@@ -971,80 +978,90 @@ export const CheckinDeskView: React.FC = () => {
 
               {/* Chronological List of Recent Arrivals */}
               <div className="flex flex-col gap-2.5">
-                {ledger.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                      item.status === 'WARNING'
-                        ? 'bg-red-50/60 border-red-200'
-                        : 'bg-[#FAF7F2] hover:bg-[#F4ECE8]/60 border-[#E9E1DD]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center font-serif text-sm font-bold shrink-0 shadow-sm ${
-                          item.status === 'WARNING'
-                            ? 'bg-red-200 text-red-800'
-                            : item.isVip
-                            ? 'bg-[#F4BD6C] text-[#291800]'
-                            : 'bg-[#FAF2EE] text-[#7F560C] border border-[#E9E1DD]'
-                        }`}
-                      >
-                        {item.initials}
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className={`font-serif text-sm font-bold ${
-                              item.status === 'WARNING' ? 'text-red-900' : 'text-[#1E1B19]'
-                            }`}
-                          >
-                            {item.guestName}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              item.status === 'WARNING'
-                                ? 'bg-red-200 text-red-900'
-                                : item.isVip
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-[#FAF2EE] text-[#827566]'
-                            }`}
-                          >
-                            {item.category}
-                          </span>
-                          {item.hasDietaryFlag && (
-                            <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                              Dietary Flag
-                            </span>
-                          )}
+                {ledger.length === 0 ? (
+                  <div className="p-8 text-center rounded-2xl bg-[#FAF7F2] border border-[#E9E1DD]">
+                    <ShieldCheck className="w-8 h-8 text-[#BF8E42] mx-auto mb-2 opacity-60" />
+                    <p className="font-serif text-sm font-bold text-[#1E1B19]">No Gate Passages Logged Yet</p>
+                    <p className="text-xs text-[#827566] mt-1">
+                      Scan an invitee's pass or confirm gate entry above to record the live passage.
+                    </p>
+                  </div>
+                ) : (
+                  ledger.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        item.status === 'WARNING'
+                          ? 'bg-red-50/60 border-red-200'
+                          : 'bg-[#FAF7F2] hover:bg-[#F4ECE8]/60 border-[#E9E1DD]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div
+                          className={`w-10 h-10 rounded-full flex items-center justify-center font-serif text-sm font-bold shrink-0 shadow-sm ${
+                            item.status === 'WARNING'
+                              ? 'bg-red-200 text-red-800'
+                              : item.isVip
+                              ? 'bg-[#F4BD6C] text-[#291800]'
+                              : 'bg-[#FAF2EE] text-[#7F560C] border border-[#E9E1DD]'
+                          }`}
+                        >
+                          {item.initials}
                         </div>
 
-                        <p className="text-xs text-[#827566] mt-0.5">
-                          {item.status === 'WARNING' ? (
-                            <span className="text-red-700 font-medium">{item.warningNote}</span>
-                          ) : (
-                            <>
-                              Count: <strong className="text-[#1E1B19]">{item.headcount} Guests</strong> •{' '}
-                              {item.assignedTable} • {item.gateName} Usher: {item.usherName}
-                            </>
-                          )}
-                        </p>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`font-serif text-sm font-bold ${
+                                item.status === 'WARNING' ? 'text-red-900' : 'text-[#1E1B19]'
+                              }`}
+                            >
+                              {item.guestName}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                item.status === 'WARNING'
+                                  ? 'bg-red-200 text-red-900'
+                                  : item.isVip
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-[#FAF2EE] text-[#827566]'
+                              }`}
+                            >
+                              {item.category}
+                            </span>
+                            {item.hasDietaryFlag && (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                                Dietary Flag
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="text-xs text-[#827566] mt-0.5">
+                            {item.status === 'WARNING' ? (
+                              <span className="text-red-700 font-medium">{item.warningNote}</span>
+                            ) : (
+                              <>
+                                Count: <strong className="text-[#1E1B19]">{item.headcount} Guests</strong> •{' '}
+                                {item.assignedTable} • {item.gateName} Usher: {item.usherName}
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex sm:flex-col items-end justify-between sm:justify-center gap-1 shrink-0">
+                        <span
+                          className={`text-xs font-bold ${
+                            item.status === 'WARNING' ? 'text-red-700' : 'text-[#7F560C]'
+                          }`}
+                        >
+                          {item.checkedInAt}
+                        </span>
+                        <span className="text-[10px] text-[#827566]">{item.gateName}</span>
                       </div>
                     </div>
-
-                    <div className="flex sm:flex-col items-end justify-between sm:justify-center gap-1 shrink-0">
-                      <span
-                        className={`text-xs font-bold ${
-                          item.status === 'WARNING' ? 'text-red-700' : 'text-[#7F560C]'
-                        }`}
-                      >
-                        {item.checkedInAt}
-                      </span>
-                      <span className="text-[10px] text-[#827566]">{item.gateName}</span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               {/* Bottom Pagination & Export */}
@@ -1091,17 +1108,17 @@ export const CheckinDeskView: React.FC = () => {
                       r="40"
                       stroke="currentColor"
                       strokeDasharray="251.2"
-                      strokeDashoffset={251.2 - (251.2 * (telemetry?.attendancePace || 55)) / 100}
+                      strokeDashoffset={251.2 - (251.2 * (telemetry?.attendancePace ?? 0)) / 100}
                       strokeLinecap="round"
                       strokeWidth="8"
                     ></circle>
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                     <span className="font-serif text-3xl font-bold text-[#1E1B19] leading-none">
-                      {telemetry?.attendancePace || 55}%
+                      {telemetry?.attendancePace ?? 0}%
                     </span>
                     <span className="text-[11px] uppercase tracking-wider text-[#827566] mt-1 font-bold">
-                      {telemetry?.totalWelcomed || 192} / {telemetry?.totalExpected || 350} Cap
+                      {telemetry?.totalWelcomed ?? 0} / {telemetry?.totalExpected ?? 0} Cap
                     </span>
                   </div>
                 </div>
@@ -1112,11 +1129,17 @@ export const CheckinDeskView: React.FC = () => {
 
               {/* Zone Breakdown Progress Bars */}
               <div className="flex flex-col gap-4">
-                {(telemetry?.zones || [
-                  { name: 'Mandap Lawn Seating', capacity: 120, seated: 84, percentage: 70 },
-                  { name: 'Peacock Dining Pavilion', capacity: 130, seated: 68, percentage: 52 },
-                  { name: 'Family High-Tea Lounge', capacity: 100, seated: 40, percentage: 40 },
-                ]).map((zone, idx) => (
+                {(telemetry?.zones?.length
+                  ? telemetry.zones
+                  : [
+                      {
+                        name: 'Main Ceremony Seating',
+                        capacity: Math.max(telemetry?.totalExpected ?? 1, 1),
+                        seated: telemetry?.totalWelcomed ?? 0,
+                        percentage: telemetry?.attendancePace ?? 0,
+                      },
+                    ]
+                ).map((zone, idx) => (
                   <div key={idx} className="flex flex-col gap-1.5">
                     <div className="flex justify-between text-xs">
                       <span className="text-[#1E1B19] font-bold">{zone.name}</span>
@@ -1142,7 +1165,9 @@ export const CheckinDeskView: React.FC = () => {
                 <div>
                   <p className="text-xs font-bold text-[#1E1B19]">Kitchen Master Alert Active</p>
                   <p className="text-xs text-[#827566] mt-0.5">
-                    42 Jain thalis queued for Tables 4, 8 & 12. Fresh batches dispatched via Courtyard Butler station.
+                    {(telemetry?.dietaryCounts?.jain ?? 0) > 0
+                      ? `${telemetry?.dietaryCounts?.jain} Jain meals requested in guest RSVPs. Kitchen notified.`
+                      : 'No special dietary restrictions flagged in active registry.'}
                   </p>
                 </div>
               </div>

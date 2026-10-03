@@ -6,6 +6,7 @@ import {
   CollaboratorTelemetry,
   InviteCollaboratorPayload,
 } from '../../services/collaborator.service';
+import { eventService } from '../../services/event.service';
 import {
   ShieldCheck,
   Crown,
@@ -34,6 +35,7 @@ export const CollaboratorsView: React.FC = () => {
 
   const [members, setMembers] = useState<CollaboratorMember[]>([]);
   const [telemetry, setTelemetry] = useState<CollaboratorTelemetry | null>(null);
+  const [ceremonies, setCeremonies] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'HOSTS' | 'PLANNERS' | 'HOSPITALITY' | 'PENDING'>('ALL');
@@ -48,14 +50,13 @@ export const CollaboratorsView: React.FC = () => {
     phone: '',
     roleName: 'PLANNER',
     relation: '',
-    ceremonyScope: 'All 5 Ceremonies',
+    ceremonyScope: 'All Ceremonies',
     personalNote:
-      'You are cordially invited to join the inner planning council for our Royal Vivaha. Your stewardship ensures perfection in our sacred rituals.',
+      'You are cordially invited to join the inner planning council for our wedding celebrations. Your stewardship ensures perfection in all events.',
   });
 
   // Action Menu Dropdown State
   const [activeMenuMemberId, setActiveMenuMemberId] = useState<string | null>(null);
-  const [isSeeding, setIsSeeding] = useState(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -66,12 +67,16 @@ export const CollaboratorsView: React.FC = () => {
     if (!weddingId) return;
     setIsLoading(true);
     try {
-      const [membersData, telemetryData] = await Promise.all([
+      const [membersData, telemetryData, eventsData] = await Promise.all([
         collaboratorService.getMembers(weddingId),
         collaboratorService.getTelemetry(weddingId),
+        eventService.getEvents(weddingId).catch(() => []),
       ]);
       setMembers(membersData);
       setTelemetry(telemetryData);
+      if (eventsData && eventsData.length > 0) {
+        setCeremonies(eventsData.map((ev) => ev.name));
+      }
     } catch (err: any) {
       console.error('Failed to load collaborator council', err);
     } finally {
@@ -82,22 +87,6 @@ export const CollaboratorsView: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [weddingId]);
-
-  const handleSeedCouncil = async () => {
-    if (!weddingId) return;
-    setIsSeeding(true);
-    try {
-      const updated = await collaboratorService.seedImperialCouncil(weddingId);
-      setMembers(updated);
-      const tel = await collaboratorService.getTelemetry(weddingId);
-      setTelemetry(tel);
-      showToast('✦ Mewar Royal Council stewards successfully inscribed!');
-    } catch (err: any) {
-      showToast(err.message || 'Failed to seed council stewards');
-    } finally {
-      setIsSeeding(false);
-    }
-  };
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,7 +108,7 @@ export const CollaboratorsView: React.FC = () => {
         personalNote: formData.personalNote,
       });
 
-      showToast(`✦ Royal invitation dispatched to ${formData.email}`);
+      showToast(`✦ Council invitation dispatched to ${formData.email}`);
       setIsDrawerOpen(false);
       setFormData({
         email: '',
@@ -127,9 +116,9 @@ export const CollaboratorsView: React.FC = () => {
         phone: '',
         roleName: 'PLANNER',
         relation: '',
-        ceremonyScope: 'All 5 Ceremonies',
+        ceremonyScope: 'All Ceremonies',
         personalNote:
-          'You are cordially invited to join the inner planning council for our Royal Vivaha. Your stewardship ensures perfection in our sacred rituals.',
+          'You are cordially invited to join the inner planning council for our wedding celebrations. Your stewardship ensures perfection in all events.',
       });
       loadData();
     } catch (err: any) {
@@ -291,19 +280,19 @@ export const CollaboratorsView: React.FC = () => {
       )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex flex-col gap-8">
-        {/* 1. HEADER & IMPERIAL CONTEXT BAR */}
+        {/* 1. HEADER & CONTEXT BAR */}
         <section className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-2 border-b border-[#E9E1DD]">
           <div className="flex flex-col gap-2 max-w-3xl">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-500">
-              <span>Imperial Dashboard</span>
+              <span>Workspace</span>
               <span className="text-stone-300">/</span>
-              <span>Wedding Workspace</span>
+              <span>Team & RBAC</span>
               <span className="text-stone-300">/</span>
               <span className="text-[#7F560C] font-bold">Council & Collaborators</span>
             </div>
             <div className="flex flex-wrap items-baseline gap-3 mt-1">
               <h1 className="font-serif text-3xl sm:text-4xl text-[#1E1B19] tracking-tight font-bold">
-                Royal Council & Team Delegations
+                Wedding Council & Collaborators
               </h1>
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -312,23 +301,13 @@ export const CollaboratorsView: React.FC = () => {
               </span>
               <span className="w-1.5 h-1.5 rounded-full bg-stone-300"></span>
               <span className="text-xs text-stone-500 font-medium">
-                Sovereign RBAC • Udaipur Destination Vivaha • Mewar Protocol
+                Role-Based Access Control • {currentWedding?.name || 'Wedding Workspace'}
               </span>
             </div>
           </div>
 
           {/* Action Button Group */}
           <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {members.length < 4 && (
-              <button
-                onClick={handleSeedCouncil}
-                disabled={isSeeding}
-                className="px-4 py-2.5 rounded-lg bg-[#FAF2EE] hover:bg-[#F4ECE8] text-[#780616] border border-[#780616]/20 transition-all text-xs font-bold flex items-center gap-2 shadow-xs disabled:opacity-50"
-              >
-                <Sparkles className="w-4 h-4 text-[#D4AF37]" />
-                <span>{isSeeding ? 'Inscribing...' : 'Seed Royal Council'}</span>
-              </button>
-            )}
             <button
               onClick={handleExportRoster}
               className="px-4 py-2.5 rounded-lg bg-[#EEE7E3] hover:bg-[#E9E1DD] text-[#1E1B19] transition-all text-xs font-bold flex items-center gap-2 shadow-xs"
@@ -353,7 +332,7 @@ export const CollaboratorsView: React.FC = () => {
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
                 <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">
-                  Guardians of Vivah
+                  Active Council Members
                 </span>
                 <span className="font-serif text-3xl font-bold text-[#1E1B19] mt-1 leading-none">
                   {telemetry?.activeCount ?? members.filter((m) => m.status === 'ACTIVE').length}
@@ -379,11 +358,13 @@ export const CollaboratorsView: React.FC = () => {
                   </span>
                 )}
               </div>
-              <span className="text-[11px] text-[#7A5912] font-semibold">All ritual leads locked</span>
+              <span className="text-[11px] text-[#7A5912] font-semibold">
+                {members.length > 0 ? `${members.length} team member${members.length === 1 ? '' : 's'}` : 'No members yet'}
+              </span>
             </div>
           </div>
 
-          {/* Card 2: Pending Royal Invites */}
+          {/* Card 2: Pending Invitations */}
           <div className="bg-white p-5 rounded-2xl shadow-[0_4px_20px_rgba(28,25,23,0.03)] border border-[#E9E1DD] flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div className="flex flex-col">
@@ -394,7 +375,9 @@ export const CollaboratorsView: React.FC = () => {
                   <span className="font-serif text-3xl font-bold text-[#1E1B19] leading-none">
                     {telemetry?.pendingCount ?? members.filter((m) => m.status === 'INVITED').length}
                   </span>
-                  <span className="text-[11px] text-[#7A5912] font-bold uppercase">Passes Active</span>
+                  <span className="text-[11px] text-[#7A5912] font-bold uppercase">
+                    {(telemetry?.pendingCount ?? members.filter((m) => m.status === 'INVITED').length) > 0 ? 'Pending' : 'All Accepted'}
+                  </span>
                 </div>
               </div>
               <div className="w-10 h-10 rounded-full bg-[#FFF9E6] flex items-center justify-center text-[#B87A00]">
@@ -402,49 +385,70 @@ export const CollaboratorsView: React.FC = () => {
               </div>
             </div>
             <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-stone-500">
-              <span className="text-xs">Dispatched via WhatsApp & Folio</span>
-              <span className="text-[11px] text-[#B32446] font-bold">Resend Ready</span>
+              <span className="text-xs">
+                {(telemetry?.pendingCount ?? members.filter((m) => m.status === 'INVITED').length) > 0
+                  ? 'Dispatched via Email'
+                  : 'No pending invites'}
+              </span>
+              <span className="text-[11px] text-[#B32446] font-bold">
+                {(telemetry?.pendingCount ?? members.filter((m) => m.status === 'INVITED').length) > 0
+                  ? 'Resend Ready'
+                  : 'Up to Date'}
+              </span>
             </div>
           </div>
 
           {/* Card 3: Role Delegations Breakdown */}
-          <div className="bg-white p-5 rounded-2xl shadow-[0_4px_20px_rgba(28,25,23,0.03)] border border-[#E9E1DD] flex flex-col justify-between">
-            <div className="flex items-start justify-between">
-              <div className="flex flex-col">
-                <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">
-                  Delegation Ratios
-                </span>
-                <div className="flex items-center gap-1.5 mt-1 text-xs text-[#1E1B19]">
-                  <span className="font-bold text-[#B32446]">
-                    {telemetry?.roleBreakdown.hosts ?? 1} Host
-                  </span>
-                  <span>•</span>
-                  <span className="font-semibold text-[#7F560C]">
-                    {telemetry?.roleBreakdown.coHosts ?? 2} Co-Hosts
-                  </span>
-                  <span>•</span>
-                  <span className="text-stone-600">
-                    {telemetry?.roleBreakdown.planners ?? 2} Planners
-                  </span>
+          {(() => {
+            const hostCount = members.filter((m) => m.role.name === 'OWNER').length;
+            const coHostCount = members.filter((m) => m.role.name === 'CO_HOST').length;
+            const plannerCount = members.filter((m) => m.role.name === 'PLANNER' || m.role.name === 'ORGANIZER').length;
+            const totalCount = members.length || 1;
+            const hostPct = Math.round((hostCount / totalCount) * 100);
+            const coHostPct = Math.round((coHostCount / totalCount) * 100);
+            const plannerPct = Math.round((plannerCount / totalCount) * 100);
+            const otherPct = Math.max(0, 100 - (hostPct + coHostPct + plannerPct));
+
+            return (
+              <div className="bg-white p-5 rounded-2xl shadow-[0_4px_20px_rgba(28,25,23,0.03)] border border-[#E9E1DD] flex flex-col justify-between">
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">
+                      Delegation Ratios
+                    </span>
+                    <div className="flex items-center gap-1.5 mt-1 text-xs text-[#1E1B19]">
+                      <span className="font-bold text-[#B32446]">
+                        {hostCount} Host{hostCount === 1 ? '' : 's'}
+                      </span>
+                      <span>•</span>
+                      <span className="font-semibold text-[#7F560C]">
+                        {coHostCount} Co-Host{coHostCount === 1 ? '' : 's'}
+                      </span>
+                      <span>•</span>
+                      <span className="text-stone-600">
+                        {plannerCount} Planner{plannerCount === 1 ? '' : 's'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-[#FAF2EE] flex items-center justify-center text-[#7F560C]">
+                    <Layers className="w-5 h-5 text-[#B32446]" />
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-stone-100 flex flex-col gap-1.5">
+                  <div className="w-full h-2 rounded-full bg-stone-100 overflow-hidden flex">
+                    <div className="bg-[#B32446] h-full" style={{ width: `${hostPct}%` }}></div>
+                    <div className="bg-[#BF8E42] h-full" style={{ width: `${coHostPct}%` }}></div>
+                    <div className="bg-[#B89147] h-full" style={{ width: `${plannerPct}%` }}></div>
+                    <div className="bg-stone-300 h-full" style={{ width: `${otherPct}%` }}></div>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-stone-500">
+                    <span>{new Set(members.map((m) => m.role.name)).size} Role{new Set(members.map((m) => m.role.name)).size === 1 ? '' : 's'}</span>
+                    <span>{members.length} Total Passkey{members.length === 1 ? '' : 's'}</span>
+                  </div>
                 </div>
               </div>
-              <div className="w-10 h-10 rounded-full bg-[#FAF2EE] flex items-center justify-center text-[#7F560C]">
-                <Layers className="w-5 h-5 text-[#B32446]" />
-              </div>
-            </div>
-            <div className="mt-4 pt-3 border-t border-stone-100 flex flex-col gap-1.5">
-              <div className="w-full h-2 rounded-full bg-stone-100 overflow-hidden flex">
-                <div className="bg-[#B32446] h-full" style={{ width: '20%' }}></div>
-                <div className="bg-[#BF8E42] h-full" style={{ width: '30%' }}></div>
-                <div className="bg-[#B89147] h-full" style={{ width: '30%' }}></div>
-                <div className="bg-stone-300 h-full" style={{ width: '20%' }}></div>
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-stone-500">
-                <span>5 Sovereign Roles</span>
-                <span>{members.length} Total Passkeys</span>
-              </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Card 4: Security & Audit Health */}
           <div className="bg-white p-5 rounded-2xl shadow-[0_4px_20px_rgba(28,25,23,0.03)] border border-[#E9E1DD] flex flex-col justify-between">
@@ -466,7 +470,7 @@ export const CollaboratorsView: React.FC = () => {
                 <span className="w-2 h-2 rounded-full bg-[#2E7D32] animate-pulse"></span>
                 Zero permission leaks
               </span>
-              <span className="text-[11px] text-[#7F560C] font-bold">Mewar Protocol</span>
+              <span className="text-[11px] text-[#7F560C] font-bold">RBAC Enforced</span>
             </div>
           </div>
         </section>
@@ -568,7 +572,7 @@ export const CollaboratorsView: React.FC = () => {
                     <td colSpan={6} className="py-12 text-center text-stone-400">
                       <Users className="w-8 h-8 mx-auto mb-2 text-stone-300" />
                       <p className="font-semibold text-stone-600">No council stewards match the active filter</p>
-                      <p className="text-xs mt-1">Click "+ Inscribe New Collaborator" or "Seed Royal Council" to begin.</p>
+                      <p className="text-xs mt-1">Click "+ Inscribe New Collaborator" to invite council members.</p>
                     </td>
                   </tr>
                 ) : (
@@ -597,7 +601,7 @@ export const CollaboratorsView: React.FC = () => {
                                 {isOwner && <Crown className="w-3.5 h-3.5 text-[#D4AF37]" />}
                               </span>
                               <span className="text-xs text-stone-500 font-medium">
-                                {member.relation || "Imperial Vivah Council Steward"}
+                                {member.relation || (isOwner ? "Primary Host" : "Council Collaborator")}
                               </span>
                               <span className="text-[11px] text-stone-400 truncate">
                                 {member.user.email}
@@ -619,14 +623,14 @@ export const CollaboratorsView: React.FC = () => {
                             </span>
                             <span className="text-[11px] text-stone-400">
                               {isOwner
-                                ? 'Master Financials + Sacred Decrees'
+                                ? 'Full Master Administration'
                                 : member.role.name === 'CO_HOST'
-                                ? 'Trousseau, Ritual Schedules, Invites'
+                                ? 'Ritual Schedules, Guest Coordination & Invites'
                                 : member.role.name === 'PLANNER' || member.role.name === 'ORGANIZER'
-                                ? 'Vendor Contracts & Muhurat Cues'
+                                ? 'Vendor Contracts & Ceremony Timelines'
                                 : member.role.name === 'HOSPITALITY'
-                                ? 'Suites, Flotilla & Gate Check-in'
-                                : 'Blessing Wall & Schedules'}
+                                ? 'Guest Concierge, Stays & Check-in'
+                                : 'Blessings & Ceremony View'}
                             </span>
                           </div>
                         </td>
@@ -865,7 +869,7 @@ export const CollaboratorsView: React.FC = () => {
                 <tr className="hover:bg-[#FAF2EE]/20">
                   <td className="py-3.5 px-4">
                     <span className="block font-semibold text-[#1E1B19]">Digital Passes & Gate QR Check-in</span>
-                    <span className="text-[11px] text-stone-400">Lake boat transfers, barcode verification at gates</span>
+                    <span className="text-[11px] text-stone-400">Guest arrivals, badge & barcode check-in</span>
                   </td>
                   <td className="py-3.5 px-3 text-center">
                     <CheckCircle2 className="w-5 h-5 mx-auto text-[#B32446]" />
@@ -888,7 +892,7 @@ export const CollaboratorsView: React.FC = () => {
                 <tr className="hover:bg-[#FAF2EE]/20">
                   <td className="py-3.5 px-4">
                     <span className="block font-semibold text-[#1E1B19]">Financials, Retainers & Contracts</span>
-                    <span className="text-[11px] text-stone-400">Vendor advances, Leela Palace catering escrow</span>
+                    <span className="text-[11px] text-stone-400">Vendor advances, retainers & catering escrow</span>
                   </td>
                   <td className="py-3.5 px-3 text-center">
                     <CheckCircle2 className="w-5 h-5 mx-auto text-[#B32446]" />
@@ -982,7 +986,7 @@ export const CollaboratorsView: React.FC = () => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g., Maharaj Vikramaditya Singhania"
+                    placeholder="e.g. Priya Sharma"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full bg-[#FFFDF9] px-4 py-2.5 rounded-xl text-xs text-[#1E1B19] placeholder:text-stone-400 border border-stone-200 focus:outline-none focus:ring-1 focus:ring-[#7F560C]"
@@ -996,7 +1000,7 @@ export const CollaboratorsView: React.FC = () => {
                     <input
                       type="email"
                       required
-                      placeholder="steward@royalhouse.in"
+                      placeholder="e.g. priya.sharma@example.com"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       className="w-full bg-[#FFFDF9] px-4 py-2.5 rounded-xl text-xs text-[#1E1B19] placeholder:text-stone-400 border border-stone-200 focus:outline-none focus:ring-1 focus:ring-[#7F560C]"
@@ -1006,7 +1010,7 @@ export const CollaboratorsView: React.FC = () => {
                     <label className="text-xs font-bold text-[#1E1B19]">WhatsApp Delivery</label>
                     <input
                       type="tel"
-                      placeholder="+91 98290 12345"
+                      placeholder="e.g. +91 98765 43210"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       className="w-full bg-[#FFFDF9] px-4 py-2.5 rounded-xl text-xs text-[#1E1B19] placeholder:text-stone-400 border border-stone-200 focus:outline-none focus:ring-1 focus:ring-[#7F560C]"
@@ -1021,7 +1025,7 @@ export const CollaboratorsView: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g., Groom's Elder Brother, Head Halwai & F&B Lead"
+                    placeholder="e.g. Sister of the Bride, Wedding Coordinator"
                     value={formData.relation}
                     onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
                     className="w-full bg-[#FFFDF9] px-4 py-2.5 rounded-xl text-xs text-[#1E1B19] placeholder:text-stone-400 border border-stone-200 focus:outline-none focus:ring-1 focus:ring-[#7F560C]"
@@ -1099,7 +1103,7 @@ export const CollaboratorsView: React.FC = () => {
                       <div className="flex flex-col">
                         <span className="font-bold text-xs text-[#1E1B19]">💌 Hospitality Concierge</span>
                         <span className="text-[11px] text-stone-500 leading-tight mt-0.5">
-                          Room keys, ferry passes, luggage and gate check-in.
+                          Room keys, guest transfers, luggage and check-in.
                         </span>
                       </div>
                     </label>
@@ -1138,35 +1142,73 @@ export const CollaboratorsView: React.FC = () => {
                       <input
                         type="radio"
                         name="ceremony-scope-radio"
-                        checked={formData.ceremonyScope === 'All 5 Ceremonies'}
-                        onChange={() => setFormData({ ...formData, ceremonyScope: 'All 5 Ceremonies' })}
+                        checked={formData.ceremonyScope === 'All Ceremonies'}
+                        onChange={() => setFormData({ ...formData, ceremonyScope: 'All Ceremonies' })}
                         className="accent-[#780616]"
                       />
-                      <span>All 5 Ceremonies</span>
+                      <span>All Ceremonies</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
                         name="ceremony-scope-radio"
-                        checked={formData.ceremonyScope !== 'All 5 Ceremonies'}
-                        onChange={() => setFormData({ ...formData, ceremonyScope: 'Mandap Vivaha & Jagmandir' })}
+                        checked={formData.ceremonyScope !== 'All Ceremonies'}
+                        onChange={() => {
+                          const initialScope = ceremonies.length > 0 ? ceremonies[0] : 'Specific Ceremonies';
+                          setFormData({ ...formData, ceremonyScope: initialScope });
+                        }}
                         className="accent-[#780616]"
                       />
                       <span>Selected Ceremonies Only</span>
                     </label>
                   </div>
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {['Ganesh Sthapana', 'Mehendi & Sangeet', 'Royal Haldi', 'Mandap Vivaha', 'Jagmandir Reception'].map(
-                      (c) => (
-                        <span
-                          key={c}
-                          className="px-2.5 py-1 rounded-md bg-[#FAF2EE] text-[#780616] text-[11px] font-medium border border-[#780616]/10"
-                        >
-                          {c}
-                        </span>
-                      )
-                    )}
-                  </div>
+                  {formData.ceremonyScope !== 'All Ceremonies' && (
+                    <div className="flex flex-col gap-2 mt-1">
+                      {ceremonies.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {ceremonies.map((c) => {
+                            const isSelected = (formData.ceremonyScope || '').includes(c);
+                            return (
+                              <button
+                                type="button"
+                                key={c}
+                                onClick={() => {
+                                  let currentList = (formData.ceremonyScope || '')
+                                    .split(',')
+                                    .map((s) => s.trim())
+                                    .filter((s) => s && s !== 'All Ceremonies' && s !== 'Specific Ceremonies');
+                                  if (isSelected) {
+                                    currentList = currentList.filter((s) => s !== c);
+                                  } else {
+                                    currentList.push(c);
+                                  }
+                                  setFormData({
+                                    ...formData,
+                                    ceremonyScope: currentList.length > 0 ? currentList.join(', ') : 'All Ceremonies',
+                                  });
+                                }}
+                                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors border ${
+                                  isSelected
+                                    ? 'bg-[#B32446] text-white border-[#B32446]'
+                                    : 'bg-[#FAF2EE] text-[#780616] border-[#780616]/10 hover:bg-[#F4ECE8]'
+                                }`}
+                              >
+                                {c}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder="e.g. Sangeet, Wedding Ceremony, Reception"
+                          value={formData.ceremonyScope === 'Specific Ceremonies' ? '' : formData.ceremonyScope}
+                          onChange={(e) => setFormData({ ...formData, ceremonyScope: e.target.value })}
+                          className="w-full bg-[#FFFDF9] px-4 py-2 rounded-xl text-xs text-[#1E1B19] placeholder:text-stone-400 border border-stone-200 focus:outline-none focus:ring-1 focus:ring-[#7F560C]"
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Personal Note */}

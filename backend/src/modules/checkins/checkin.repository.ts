@@ -7,7 +7,7 @@ export class CheckinRepository {
    */
   async findGuestForScan(weddingId: string, identifier: string) {
     const cleanId = identifier.trim();
-    const tokenPart = cleanId.replace(/^MM-VIV-/i, '').replace(/^tok_/i, '').trim();
+    const tokenPart = cleanId.replace(/^MM-VIV-/i, '').replace(/^MMM-/i, '').replace(/^tok_/i, '').trim();
 
     // 1. Try finding by InvitationAccess tokenHash
     const invitationAccess = await prisma.invitationAccess.findFirst({

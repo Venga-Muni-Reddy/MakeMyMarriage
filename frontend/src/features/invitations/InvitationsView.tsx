@@ -116,6 +116,16 @@ export const InvitationsView: React.FC = () => {
   const { currentWedding } = useWedding();
   const weddingId = currentWedding?.id;
 
+  const partner1 = currentWedding?.settings?.partner1Name || '';
+  const partner2 = currentWedding?.settings?.partner2Name || '';
+  const coupleDisplay = partner1 && partner2
+    ? `${partner1} & ${partner2}`
+    : currentWedding?.name?.replace(/^The Royal Union of /i, '') || 'Royal Couple';
+
+  const coupleMonogram = partner1 && partner2
+    ? `${partner1.charAt(0)}&${partner2.charAt(0)}`.toUpperCase()
+    : (currentWedding?.name ? currentWedding.name.replace(/^The Royal Union of /i, '').split('&').map((s: string) => s.trim().charAt(0)).filter(Boolean).join('&').toUpperCase() : 'MMM');
+
   // Data State
   const [invitations, setInvitations] = useState<HouseholdInvitation[]>([]);
   const [telemetry, setTelemetry] = useState<InvitationTelemetry | null>(null);
@@ -127,7 +137,7 @@ export const InvitationsView: React.FC = () => {
   // Studio Interactive State
   const [activeStudioTab, setActiveStudioTab] = useState<'theme' | 'verse' | 'music' | 'passes'>('theme');
   const [selectedThemeId, setSelectedThemeId] = useState('rajputana-crimson');
-  const [liveVerse, setLiveVerse] = useState('');
+  const [liveVerse, setLiveVerse] = useState('वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ। निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥');
   const [verseFont, setVerseFont] = useState('font-display');
   const [selectedRagaId, setSelectedRagaId] = useState('bismillah-shehnai');
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -214,21 +224,23 @@ export const InvitationsView: React.FC = () => {
   };
 
   // Save Studio Settings
-  const handleSaveSettings = async () => {
+  const handleSaveSettings = async (overrideSoundscapeId?: string) => {
     if (!weddingId) return;
     setIsSavingSettings(true);
     try {
+      const soundscapeToSave = overrideSoundscapeId || selectedRagaId;
       await invitationService.updateSettings(weddingId, {
         activeThemeId: selectedThemeId,
-        verseText: liveVerse,
+        verseLanguage: 'SANSKRIT',
+        verseText: liveVerse || 'वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ। निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥',
         verseFont,
-        activeSoundscapeId: selectedRagaId,
+        activeSoundscapeId: soundscapeToSave,
         autoplaySoundscape: true,
       });
       showToast('Imperial Studio settings synchronized successfully');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save settings', err);
-      showToast('Error updating studio settings');
+      showToast(err.response?.data?.message || 'Error updating studio settings');
     } finally {
       setIsSavingSettings(false);
     }
@@ -239,9 +251,10 @@ export const InvitationsView: React.FC = () => {
     if (!weddingId) return;
     const phone = inv.guest.phone ? inv.guest.phone.replace(/[^0-9]/g, '') : '';
     const magicUrl = `${window.location.origin}/invite/${inv.magicToken}`;
-    const coupleText = 'Radhika & Aarav';
+    const coupleText = coupleDisplay;
+    const venueName = currentWedding?.settings?.primaryVenueName || 'The Leela Palace, Udaipur';
     const text = encodeURIComponent(
-      `✨ *Shubh Vivah Aamantran*\n\nNamaste ${inv.guest.displayName},\n\nBy the divine grace of the Almighty, you are cordially invited to celebrate the royal nuptials of *${coupleText}* at The Leela Palace, Udaipur.\n\nKindly access your personalized family pass & RSVP confirmation here:\n🔗 ${magicUrl}\n\nWith warm royal regards,\nRathore & Ranawat Families`
+      `✨ *Shubh Vivah Aamantran*\n\nNamaste ${inv.guest.displayName},\n\nBy the divine grace of the Almighty, you are cordially invited to celebrate the royal nuptials of *${coupleText}* at ${venueName}.\n\nKindly access your personalized family pass & RSVP confirmation here:\n🔗 ${magicUrl}\n\nWith warm royal regards,\nThe Royal Family`
     );
 
     // Update status in backend
@@ -670,8 +683,8 @@ export const InvitationsView: React.FC = () => {
                       onClick={() =>
                         setLiveVerse(
                           liveVerse.includes('वक्रतुण्ड')
-                            ? 'By the divine grace of Shree Eklingji, we seek the auspicious presence of your family at the nuptials of Radhika & Aarav.'
-                            : 'वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ। निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥\nBy the divine grace of Shree Eklingji, we seek the auspicious presence of your family at the nuptials of Radhika & Aarav.'
+                            ? `By the divine grace of the Almighty, we seek the auspicious presence of your family at the nuptials of ${coupleDisplay}.`
+                            : `वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ। निर्विघ्नं कुरु मे देव सर्वकार्येषु सर्वदा॥\nBy the divine grace of the Almighty, we seek the auspicious presence of your family at the nuptials of ${coupleDisplay}.`
                         )
                       }
                       className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-primary transition-colors"
@@ -824,7 +837,7 @@ export const InvitationsView: React.FC = () => {
               </span>
               <button
                 disabled={isSavingSettings}
-                onClick={handleSaveSettings}
+                onClick={() => handleSaveSettings()}
                 className="px-5 py-2 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-semibold shadow-xs"
               >
                 {isSavingSettings ? 'Synchronizing...' : 'Save Studio Changes'}
@@ -893,8 +906,8 @@ export const InvitationsView: React.FC = () => {
                     className="my-1 cursor-pointer transition-transform duration-300 hover:scale-105"
                   >
                     <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-secondary via-[#d2335a] to-secondary flex items-center justify-center shadow-lg border-2 border-amber-200">
-                      <div className="w-12 h-12 rounded-full border border-amber-200/60 flex items-center justify-center font-headline-md font-bold text-amber-100 text-lg">
-                        R&amp;A
+                      <div className="w-12 h-12 rounded-full border border-amber-200/60 flex items-center justify-center font-headline-md font-bold text-amber-100 text-sm">
+                        {coupleMonogram}
                       </div>
                     </div>
                     <span className="block mt-1 text-[10px] font-semibold uppercase tracking-widest text-primary">
@@ -915,7 +928,7 @@ export const InvitationsView: React.FC = () => {
                       Shubh Vivah Aamantran
                     </p>
                     <h3 className="font-headline-md font-bold text-lg text-secondary leading-tight">
-                      Radhika &amp; Aarav
+                      {coupleDisplay}
                     </h3>
                     <p className={`text-[11px] text-tertiary leading-snug px-1 line-clamp-3 ${verseFont}`}>
                       "{liveVerse || 'वक्रतुण्ड महाकाय सूर्यकोटि समप्रभ।'}"

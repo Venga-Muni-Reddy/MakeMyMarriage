@@ -32,6 +32,7 @@ import {
   PhotoModerationStatus,
   PhotoVisibility,
 } from '../../services/media.service';
+import { eventService, WeddingEvent } from '../../services/event.service';
 
 export const PhotoVaultView: React.FC = () => {
   const { weddingId } = useParams<{ weddingId: string }>();
@@ -40,6 +41,7 @@ export const PhotoVaultView: React.FC = () => {
 
   // Data states
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [events, setEvents] = useState<WeddingEvent[]>([]);
   const [telemetry, setTelemetry] = useState<MediaTelemetry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCuratorMode, setIsCuratorMode] = useState(true);
@@ -96,21 +98,26 @@ export const PhotoVaultView: React.FC = () => {
     setSelectedFile(file);
   };
 
-  // Fetch photos & telemetry
+  // Fetch photos, events & telemetry
   const loadGalleryData = async () => {
     if (!activeWeddingId) return;
     try {
       setIsLoading(true);
-      const [photoList, stats] = await Promise.all([
+      const [photoList, stats, eventList] = await Promise.all([
         mediaService.getPhotos(activeWeddingId, {
           eventId: selectedAlbum !== 'all' ? selectedAlbum : undefined,
           search: searchQuery || undefined,
           sortBy,
         }),
         mediaService.getTelemetry(activeWeddingId),
+        eventService.getEvents(activeWeddingId).catch(() => []),
       ]);
       setPhotos(Array.isArray(photoList) ? photoList : []);
       setTelemetry(stats);
+      setEvents(Array.isArray(eventList) ? eventList : []);
+      if (Array.isArray(eventList) && eventList.length > 0 && !uploadCeremony) {
+        setUploadCeremony(eventList[0].name);
+      }
     } catch (err) {
       console.error('Failed to load media vault:', err);
       setPhotos([]);
@@ -244,8 +251,8 @@ export const PhotoVaultView: React.FC = () => {
   };
 
   const handleCopyGuestLink = () => {
-    const slug = currentWedding?.slug || 'ananya-rahul';
-    const guestUrl = `${window.location.origin}/w/${slug}#gallery`;
+    const slug = currentWedding?.slug || '';
+    const guestUrl = slug ? `${window.location.origin}/w/${slug}#gallery` : `${window.location.origin}/dashboard/${activeWeddingId}/gallery`;
     navigator.clipboard?.writeText(guestUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
@@ -293,7 +300,7 @@ export const PhotoVaultView: React.FC = () => {
                   Imperial Archives
                 </span>
                 <span className="text-xs text-[#827566]">
-                  {currentWedding?.settings?.primaryVenueName || 'The Leela Palace & Jagmandir Island'}
+                  {currentWedding?.settings?.primaryVenueName || currentWedding?.name || 'Wedding Celebration'}
                 </span>
               </div>
               <h1 className="font-serif text-3xl sm:text-4xl text-[#1E1B19] mt-1 tracking-tight font-semibold">
@@ -301,7 +308,7 @@ export const PhotoVaultView: React.FC = () => {
               </h1>
               <p className="text-sm text-[#4F4538] mt-1 max-w-3xl">
                 Curated ritual archives, professional master reels, and unscripted guest candids orchestrated across
-                Udaipur’s sacred royal ceremonies.
+                {currentWedding?.name ? ` ${currentWedding.name}’s` : ' our'} sacred celebrations.
               </p>
             </div>
 
@@ -358,7 +365,11 @@ export const PhotoVaultView: React.FC = () => {
                   <span className="text-2xl sm:text-3xl font-serif font-bold text-[#1E1B19]">
                     {telemetry?.totalMemories ?? (photos?.length || 0)}
                   </span>
-                  <span className="text-xs text-emerald-700 font-semibold">+24 today</span>
+                  {telemetry?.todayUploadsCount ? (
+                    <span className="text-xs text-emerald-700 font-semibold">+{telemetry.todayUploadsCount} today</span>
+                  ) : (
+                    <span className="text-xs text-[#827566] font-medium">Live ledger</span>
+                  )}
                 </div>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#FAF2EE] flex items-center justify-center text-[#780616] border border-[#E9E1DD]">
@@ -371,9 +382,11 @@ export const PhotoVaultView: React.FC = () => {
                 <span className="text-xs text-[#827566] uppercase tracking-wider block font-medium">Ritual Albums</span>
                 <div className="flex items-baseline gap-2 mt-0.5">
                   <span className="text-2xl sm:text-3xl font-serif font-bold text-[#1E1B19]">
-                    {telemetry?.ritualAlbums || 6}
+                    {events.length > 0 ? events.length : (telemetry?.ritualAlbums ?? 0)}
                   </span>
-                  <span className="text-xs text-[#827566]">4 Ceremonies</span>
+                  <span className="text-xs text-[#827566]">
+                    {events.length > 0 ? `${events.length} Ceremonies` : 'Active Albums'}
+                  </span>
                 </div>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#FFF8F5] flex items-center justify-center text-[#BF8E42] border border-[#E9E1DD]">
@@ -386,9 +399,9 @@ export const PhotoVaultView: React.FC = () => {
                 <span className="text-xs text-[#827566] uppercase tracking-wider block font-medium">Banquet QR Scans</span>
                 <div className="flex items-baseline gap-2 mt-0.5">
                   <span className="text-2xl sm:text-3xl font-serif font-bold text-[#780616]">
-                    {telemetry?.banquetQrScans || 142}
+                    {telemetry?.banquetQrScans ?? 0}
                   </span>
-                  <span className="text-xs text-[#780616] font-medium">Tables 1–25</span>
+                  <span className="text-xs text-[#780616] font-medium">Guest Uploads</span>
                 </div>
               </div>
               <div className="w-10 h-10 rounded-xl bg-[#FFD9DC]/60 flex items-center justify-center text-[#780616] border border-[#E9E1DD]">
@@ -401,11 +414,13 @@ export const PhotoVaultView: React.FC = () => {
                 <span className="text-xs text-[#827566] uppercase tracking-wider block font-medium">Pending Review</span>
                 <div className="flex items-baseline gap-2 mt-0.5">
                   <span className="text-2xl sm:text-3xl font-serif font-bold text-[#BF8E42]">
-                    {telemetry?.pendingReview ?? 7}
+                    {telemetry?.pendingReview ?? 0}
                   </span>
                   <span className="inline-flex items-center gap-1 text-xs text-[#780616] font-semibold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#780616] animate-pulse"></span>
-                    Requires Action
+                    {(telemetry?.pendingReview ?? 0) > 0 && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#780616] animate-pulse"></span>
+                    )}
+                    {(telemetry?.pendingReview ?? 0) > 0 ? 'Requires Action' : 'All Clear'}
                   </span>
                 </div>
               </div>
@@ -439,11 +454,11 @@ export const PhotoVaultView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <h3 className="font-serif text-lg font-semibold text-[#1E1B19]">Banquet Table QR Stream Active</h3>
                   <span className="px-2 py-0.5 rounded-full bg-[#FFDDB1] text-[#432A00] text-xs font-semibold">
-                    Tables 1–25
+                    Live Stream
                   </span>
                 </div>
                 <p className="text-xs text-[#4F4538] max-w-xl mt-1 leading-relaxed">
-                  Guests across courtyard banquets scan their pass and broadcast high-res memories straight from their
+                  Guests across banquet tables scan their pass and broadcast high-res memories straight from their
                   smartphone camera with zero login required.
                 </p>
               </div>
@@ -480,13 +495,16 @@ export const PhotoVaultView: React.FC = () => {
           {/* Responsive Horizontal Pills */}
           <div className="flex items-center gap-2 overflow-x-auto w-full lg:w-auto pb-1.5 lg:pb-0 scrollbar-none">
             {[
-              { id: 'all', label: 'All Memories', count: telemetry?.totalMemories ?? (photos?.length || 0) },
-              { id: 'haldi', label: 'Haldi Radiance', count: 54 },
-              { id: 'mehendi', label: 'Mehendi Artistry', count: 68 },
-              { id: 'sangeet', label: 'Imperial Sangeet', count: 92 },
-              { id: 'muhurat', label: 'Sacred Muhurtham', count: 86 },
-              { id: 'reception', label: 'Royal Reception', count: 48 },
-              { id: 'candids', label: 'Table Snaps', count: 142 },
+              { id: 'all', label: 'All Memories', count: photos?.length || 0 },
+              ...events.map((ev) => ({
+                id: ev.id,
+                label: ev.name,
+                count: photos.filter(
+                  (p) =>
+                    p.eventId === ev.id ||
+                    (p.eventName && p.eventName.toLowerCase() === ev.name.toLowerCase())
+                ).length,
+              })),
             ].map((album) => {
               const active = selectedAlbum === album.id;
               return (
@@ -809,7 +827,7 @@ export const PhotoVaultView: React.FC = () => {
                       />
                     </div>
                     <span className="text-[11px] text-[#827566]">
-                      Transmitting directly to Cloudinary Mewar Master CDN Node...
+                      Transmitting directly to Cloudinary Wedding CDN Node...
                     </span>
                   </div>
                 )}
@@ -827,13 +845,12 @@ export const PhotoVaultView: React.FC = () => {
                       onChange={(e) => setUploadCeremony(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl bg-[#FAF2EE] border border-[#E9E1DD] text-xs text-[#1E1B19] focus:outline-none focus:border-[#BF8E42]"
                     >
-                      <option>Sacred Muhurtham (Jagmandir Island)</option>
-                      <option>Imperial Baraat (Lake Promenade)</option>
-                      <option>Haldi Radiance (Courtyard)</option>
-                      <option>Mehendi Artistry (Zenana Mahal)</option>
-                      <option>Imperial Sangeet (Manek Chowk)</option>
-                      <option>Royal Reception (Palace Ballrooms)</option>
-                      <option>General Candids & Guest Memories</option>
+                      {events.map((ev) => (
+                        <option key={ev.id} value={ev.name}>
+                          {ev.name}
+                        </option>
+                      ))}
+                      <option value="General & Candids">General Candids & Guest Memories</option>
                     </select>
                   </div>
 
@@ -1024,7 +1041,11 @@ export const PhotoVaultView: React.FC = () => {
             <span>•</span>
             <span>{photos[activeLightboxIndex].uploader?.cameraModel || 'Wedding Camera'}</span>
             <span>•</span>
-            <span>{photos[activeLightboxIndex].uploader?.tableNumber || 'Main Courtyard'}</span>
+            <span>
+              {photos[activeLightboxIndex].uploader?.tableNumber ||
+                photos[activeLightboxIndex].eventName ||
+                'Wedding Memory'}
+            </span>
             <span>•</span>
             <span className="text-emerald-400">Cloudinary 4K Master</span>
           </div>
@@ -1128,7 +1149,7 @@ export const PhotoVaultView: React.FC = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#827566]">
           <div className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-            <span>MakeMyMarriage Imperial Cloudinary Engine • 348 Vaulted Masters • 0 Storage Limit</span>
+            <span>MakeMyMarriage Imperial Cloudinary Engine • {photos.length} Vaulted Memories</span>
           </div>
           <div className="flex items-center gap-6">
             <button
@@ -1139,7 +1160,7 @@ export const PhotoVaultView: React.FC = () => {
               High-Res Print Export
             </button>
             <a
-              href={`/w/${currentWedding?.slug || 'ananya-rahul'}#gallery`}
+              href={currentWedding?.slug ? `/w/${currentWedding.slug}#gallery` : '#'}
               target="_blank"
               rel="noreferrer"
               className="hover:text-[#780616] transition-colors flex items-center gap-1"

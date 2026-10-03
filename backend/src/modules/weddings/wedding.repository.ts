@@ -143,7 +143,7 @@ export class WeddingRepository {
         members: {
           some: {
             userId,
-            status: 'ACTIVE',
+            status: { in: ['ACTIVE', 'INVITED'] },
           },
         },
       },
@@ -304,14 +304,14 @@ export class WeddingRepository {
         const meta = collaboratorsMeta[m.id] || collaboratorsMeta[m.user.email] || {};
         const defaultRelation =
           m.role.name === 'OWNER'
-            ? "Chief Host • Sovereign Patron"
+            ? "Primary Host"
             : m.role.name === 'CO_HOST'
-            ? "Royal Co-Host"
+            ? "Co-Host"
             : m.role.name === 'PLANNER' || m.role.name === 'ORGANIZER'
-            ? "Lead Wedding Planner"
+            ? "Wedding Planner"
             : m.role.name === 'HOSPITALITY'
-            ? "Palace Hospitality Concierge"
-            : "Elder Observer";
+            ? "Hospitality Coordinator"
+            : "Council Observer";
 
         return {
           id: m.id,
@@ -514,6 +514,28 @@ export class WeddingRepository {
       data: {
         invitedAt: new Date(),
         status: member.status === 'ACTIVE' ? 'ACTIVE' : 'INVITED',
+      },
+      include: { user: true, role: true },
+    });
+  }
+
+  async acceptMemberInvitation(weddingId: string, userId: string) {
+    const member = await prisma.weddingMember.findUnique({
+      where: {
+        weddingId_userId: {
+          weddingId,
+          userId,
+        },
+      },
+    });
+    if (!member) {
+      throw new Error('No invitation found for this user in this wedding workspace');
+    }
+    return prisma.weddingMember.update({
+      where: { id: member.id },
+      data: {
+        status: 'ACTIVE',
+        joinedAt: new Date(),
       },
       include: { user: true, role: true },
     });

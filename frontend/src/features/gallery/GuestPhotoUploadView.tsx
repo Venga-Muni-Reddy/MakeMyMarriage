@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Camera,
@@ -8,9 +8,12 @@ import {
   UtensilsCrossed,
 } from 'lucide-react';
 import { mediaService } from '../../services/media.service';
+import { websiteService } from '../../services/website.service';
 
 export const GuestPhotoUploadView: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [weddingId, setWeddingId] = useState<string>('');
+  const [weddingName, setWeddingName] = useState<string>('');
   const [guestName, setGuestName] = useState('');
   const [tableNumber, setTableNumber] = useState('7');
   const [caption, setCaption] = useState('');
@@ -21,6 +24,18 @@ export const GuestPhotoUploadView: React.FC = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSuccess, setIsSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (slug) {
+      websiteService
+        .getPublicWebsite(slug)
+        .then((res) => {
+          if (res?.weddingId) setWeddingId(res.weddingId);
+          if (res?.name) setWeddingName(res.name);
+        })
+        .catch((err) => console.error('Failed to load wedding for guest upload', err));
+    }
+  }, [slug]);
 
   const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
   const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/gif'];
@@ -62,11 +77,19 @@ export const GuestPhotoUploadView: React.FC = () => {
       setIsUploading(true);
       setUploadProgress(15);
 
-      // Using demo wedding ID or fallback
-      const weddingId = 'f238b9ec-9c7f-41d3-8885-0080ae24a462';
+      let targetWeddingId = weddingId;
+      if (!targetWeddingId && slug) {
+        const res = await websiteService.getPublicWebsite(slug);
+        targetWeddingId = res.weddingId;
+      }
+
+      if (!targetWeddingId) {
+        alert('Could not determine active wedding session. Please scan your banquet table QR code.');
+        return;
+      }
 
       // 1. Get signature
-      const sig = await mediaService.getSignature(weddingId);
+      const sig = await mediaService.getSignature(targetWeddingId);
 
       // 2. Direct upload to Cloudinary (or mock fallback)
       const uploadResult = await mediaService.uploadFileToCloudinary(selectedFile, sig, (percent) => {
@@ -74,7 +97,7 @@ export const GuestPhotoUploadView: React.FC = () => {
       });
 
       // 3. Register guest upload
-      await mediaService.guestUpload(weddingId, {
+      await mediaService.guestUpload(targetWeddingId, {
         publicId: uploadResult.publicId,
         secureUrl: uploadResult.secureUrl,
         caption: caption || 'Banquet Candid Moment',
@@ -121,9 +144,11 @@ export const GuestPhotoUploadView: React.FC = () => {
           <div className="w-12 h-12 rounded-2xl bg-[#FFDDB1]/60 flex items-center justify-center text-[#780616] mx-auto mb-2 border border-[#D4AF37]/30 shadow-sm">
             <Camera className="w-6 h-6 text-[#780616]" />
           </div>
-          <h1 className="font-serif text-2xl font-bold text-[#1E1B19]">Banquet Photo Broadcast</h1>
+          <h1 className="font-serif text-2xl font-bold text-[#1E1B19]">
+            {weddingName ? `${weddingName}` : 'Banquet Photo Broadcast'}
+          </h1>
           <p className="text-xs text-[#827566] mt-1 max-w-xs mx-auto">
-            Share candid smiles, blessings, and memories directly from your smartphone to the bride & groom’s Royal 4K Vault.
+            Share candid smiles, blessings, and memories directly from your smartphone to {weddingName || 'the royal wedding'} vault.
           </p>
         </div>
 

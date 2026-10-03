@@ -79,30 +79,8 @@ export class CheckinService {
       usherName?: string;
     }
   ): Promise<GuestVerificationDossier> {
-    try {
-      const res: any = await api.post(`/weddings/${weddingId}/checkins/scan`, payload);
-      return res?.data ?? res;
-    } catch (err) {
-      // Diagnostic fallback simulation if server is offline
-      const code = payload.qrToken || payload.manualCode || payload.phone || '9821';
-      return {
-        status: 'ACCESS_GRANTED',
-        guestId: 'guest-fallback-9821',
-        name: 'Dr. Vikramaditya Rathore & Family',
-        initials: 'VR',
-        title: 'Senior Surgeon, Mewar Medical Council',
-        category: "VIP Dignitary • Groom's Family Side",
-        isVip: true,
-        phone: '+91 98290 14412',
-        passToken: code.startsWith('MM') ? code : `MM-VIV-${code}`,
-        headcount: 3,
-        companions: ['Mrs. Sunita Rathore', 'Aryan Rathore'],
-        assignedTable: 'Table 4 — Peacock Pavilion',
-        zone: 'Grand Mandap Front View • Zone A',
-        foodPreference: 'Strict Jain (No Onion / Garlic / Root Vegetables)',
-        dietaryNotes: 'Strict Jain — 2 Meals, 1 Regular Vegetarian',
-      };
-    }
+    const res: any = await api.post(`/weddings/${weddingId}/checkins/scan`, payload);
+    return res?.data ?? res;
   }
 
   /**

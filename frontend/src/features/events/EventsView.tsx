@@ -11,18 +11,87 @@ import {
   Flame,
   Printer,
   X,
-  Phone,
-  Video,
   AlertCircle,
 } from 'lucide-react';
 import { useWedding } from '../../context/WeddingContext';
 import { eventService, WeddingEvent } from '../../services/event.service';
+
+export interface RitualCategory {
+  id: string;
+  label: string;
+  icon: string;
+  isDefault?: boolean;
+}
+
+export const DEFAULT_RITUAL_CATEGORIES: RitualCategory[] = [
+  { id: 'HALDI', label: 'Sacred Haldi & Snanam', icon: '☀️', isDefault: true },
+  { id: 'MEHENDI', label: 'Mehendi & Henna Lounge', icon: '🌿', isDefault: true },
+  { id: 'SANGEET', label: 'Twilight Sangeet & Musical Gala', icon: '💃', isDefault: true },
+  { id: 'VIVAHA', label: 'Vedic Vivaha & Saat Pheras', icon: '🔥', isDefault: true },
+  { id: 'RECEPTION', label: 'Royal Reception & Doli Bidaai', icon: '🥂', isDefault: true },
+  { id: 'COCKTAIL', label: 'Pre-Wedding Cocktail Night', icon: '🍸', isDefault: true },
+  { id: 'ENGAGEMENT', label: 'Ring Exchange & Sagai', icon: '💍', isDefault: true },
+  { id: 'PUJA', label: 'Ganesh Puja & Mandap Muhurat', icon: '🪔', isDefault: true },
+  { id: 'OTHER', label: 'Custom Family Rite', icon: '✨', isDefault: true },
+];
+
+const EMOJI_PALETTE = ['☀️', '🌿', '💃', '🔥', '🥂', '🍸', '💍', '🪔', '🥥', '🌾', '🥁', '👑', '✨', '📿', '🌸', '💐', '🕊️'];
 
 export const EventsView: React.FC = () => {
   const { currentWedding } = useWedding();
   const [events, setEvents] = useState<WeddingEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>('all');
+
+  const weddingId = currentWedding?.id;
+
+  // Custom Ritual Categories per wedding
+  const [customCategories, setCustomCategories] = useState<RitualCategory[]>(() => {
+    if (!weddingId) return [];
+    try {
+      const saved = localStorage.getItem(`mmm_custom_rituals_${weddingId}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (!weddingId) return;
+    try {
+      const saved = localStorage.getItem(`mmm_custom_rituals_${weddingId}`);
+      if (saved) setCustomCategories(JSON.parse(saved));
+    } catch {
+      // ignore
+    }
+  }, [weddingId]);
+
+  const saveCustomCategories = (updated: RitualCategory[]) => {
+    setCustomCategories(updated);
+    if (weddingId) {
+      localStorage.setItem(`mmm_custom_rituals_${weddingId}`, JSON.stringify(updated));
+    }
+  };
+
+  const allCategories = React.useMemo(() => {
+    const list = [...DEFAULT_RITUAL_CATEGORIES, ...customCategories];
+    events.forEach((ev) => {
+      const rt = ev.settings?.ritualType;
+      const label = ev.settings?.ritualCategoryLabel;
+      const icon = ev.settings?.ritualCategoryIcon || '✨';
+      if (rt && !list.some((c) => c.id === rt || c.label === rt)) {
+        list.push({ id: rt, label: label || rt, icon });
+      }
+    });
+    return list;
+  }, [customCategories, events]);
+
+  const getCategoryDisplay = (typeKey?: string) => {
+    if (!typeKey) return { label: 'Sacred Rite', icon: '✨' };
+    const found = allCategories.find((c) => c.id === typeKey || c.label === typeKey);
+    if (found) return { label: found.label, icon: found.icon };
+    return { label: typeKey, icon: '✨' };
+  };
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,11 +104,18 @@ export const EventsView: React.FC = () => {
   const [endAt, setEndAt] = useState('');
   const [locationName, setLocationName] = useState('');
   const [dressCode, setDressCode] = useState('');
+  const [coverImageUrl, setCoverImageUrl] = useState('');
   const [ritualType, setRitualType] = useState('VIVAHA');
+  const [isMuhurtham, setIsMuhurtham] = useState(true);
+  const [muhurthamTime, setMuhurthamTime] = useState('11:24 AM');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const weddingId = currentWedding?.id;
+  // Category Editor State inside Modal
+  const [isManagingCategories, setIsManagingCategories] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatIcon, setNewCatIcon] = useState('🪔');
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
 
   const fetchEvents = async () => {
     if (!weddingId) return;
@@ -87,35 +163,53 @@ export const EventsView: React.FC = () => {
       ? events
       : events.filter((e) => getEventDateKey(e.startAt) === selectedDay);
 
+  const weddingDateStr = currentWedding?.weddingDate || currentWedding?.settings?.startDate || new Date().toISOString();
+  const defaultBaseDate = weddingDateStr.slice(0, 10);
+  const defaultVenueName = currentWedding?.settings?.primaryVenueName || currentWedding?.settings?.primaryCity || 'Main Palace Hall';
+
   const openAddModal = (preset?: { name: string; ritualType: string; dressCode: string }) => {
     setEditingEvent(null);
     setFormError(null);
+    setIsManagingCategories(false);
+    setEditingCatId(null);
+    setNewCatName('');
+    setCoverImageUrl('');
     if (preset) {
       setName(preset.name);
       setRitualType(preset.ritualType);
       setDressCode(preset.dressCode);
+      setIsMuhurtham(preset.ritualType === 'VIVAHA');
+      setMuhurthamTime('11:24 AM');
     } else {
       setName('');
       setRitualType('VIVAHA');
       setDressCode('Vedic Imperial Silk & Crimson Turbans');
+      setIsMuhurtham(true);
+      setMuhurthamTime('11:24 AM');
     }
     setDescription('');
-    setStartAt('2026-11-28T09:30');
-    setEndAt('2026-11-28T14:00');
-    setLocationName('Palace Lakeside Mandap, The Leela Palace, Udaipur');
+    setStartAt(`${defaultBaseDate}T10:00`);
+    setEndAt(`${defaultBaseDate}T14:00`);
+    setLocationName(defaultVenueName);
     setIsModalOpen(true);
   };
 
   const openEditModal = (event: WeddingEvent) => {
     setEditingEvent(event);
     setFormError(null);
+    setIsManagingCategories(false);
+    setEditingCatId(null);
+    setNewCatName('');
     setName(event.name);
     setDescription(event.description || '');
+    setCoverImageUrl(event.settings?.coverImageUrl || '');
     setStartAt(event.startAt ? new Date(event.startAt).toISOString().slice(0, 16) : '');
     setEndAt(event.endAt ? new Date(event.endAt).toISOString().slice(0, 16) : '');
-    setLocationName(event.settings?.locationName || 'The Leela Palace, Udaipur');
+    setLocationName(event.settings?.locationName || defaultVenueName);
     setDressCode(event.settings?.dressCode || 'Royal Formal');
     setRitualType(event.settings?.ritualType || 'VIVAHA');
+    setIsMuhurtham(Boolean(event.settings?.isMuhurtham ?? (event.settings?.ritualType === 'VIVAHA')));
+    setMuhurthamTime(event.settings?.muhurthamTime || '11:24 AM');
     setIsModalOpen(true);
   };
 
@@ -130,6 +224,10 @@ export const EventsView: React.FC = () => {
     setIsSubmitting(true);
     setFormError(null);
 
+    const selectedCat = allCategories.find((c) => c.id === ritualType || c.label === ritualType);
+    const categoryLabel = selectedCat ? selectedCat.label : ritualType;
+    const categoryIcon = selectedCat ? selectedCat.icon : '✨';
+
     const payload = {
       name: name.trim(),
       description: description.trim() || undefined,
@@ -139,10 +237,13 @@ export const EventsView: React.FC = () => {
       dressCode: dressCode.trim(),
       settings: {
         ritualType,
+        ritualCategoryLabel: categoryLabel,
+        ritualCategoryIcon: categoryIcon,
         locationName: locationName.trim(),
         dressCode: dressCode.trim(),
-        isMuhurtham: ritualType === 'VIVAHA',
-        muhurthamTime: ritualType === 'VIVAHA' ? '11:24 AM' : undefined,
+        coverImageUrl: coverImageUrl.trim() || undefined,
+        isMuhurtham,
+        muhurthamTime: isMuhurtham ? muhurthamTime : undefined,
       },
     };
 
@@ -179,9 +280,9 @@ export const EventsView: React.FC = () => {
 
   const coupleNames = currentWedding?.settings?.partner1Name && currentWedding?.settings?.partner2Name
     ? `${currentWedding.settings.partner1Name} & ${currentWedding.settings.partner2Name}`
-    : currentWedding?.name || 'Meera & Aarav';
+    : currentWedding?.name || 'Sacred Union';
 
-  const weddingVenue = currentWedding?.settings?.primaryVenueName || 'The Leela Palace, Udaipur';
+  const weddingVenue = currentWedding?.settings?.primaryVenueName || currentWedding?.settings?.primaryCity || 'Auspicious Venue';
 
   return (
     <div className="space-y-8 font-sans text-on-surface antialiased">
@@ -341,10 +442,15 @@ export const EventsView: React.FC = () => {
                       {/* Card Header & Badges */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary-fixed/50 text-primary font-bold text-xs uppercase tracking-wider">
-                            <Sparkles className="w-3.5 h-3.5 fill-primary" />
-                            {event.settings?.ritualType || 'Sacred Rite'}
-                          </span>
+                          {(() => {
+                            const catDisplay = getCategoryDisplay(event.settings?.ritualType);
+                            return (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-fixed/50 text-primary font-bold text-xs uppercase tracking-wider">
+                                <span>{catDisplay.icon}</span>
+                                <span>{catDisplay.label}</span>
+                              </span>
+                            );
+                          })()}
 
                           {event.settings?.isMuhurtham && (
                             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant text-xs font-bold animate-pulse">
@@ -380,23 +486,28 @@ export const EventsView: React.FC = () => {
                         </p>
                       )}
 
-                      {/* Hero Image Banner if Vivaha */}
-                      {isHero && (
+                      {/* Cover Image Banner (Only rendered if user uploaded/configured an image) */}
+                      {event.settings?.coverImageUrl && (
                         <div className="w-full h-40 sm:h-48 rounded-xl overflow-hidden relative shadow-inner">
                           <img
-                            src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1200&q=80"
-                            alt="Mandap Venue"
+                            src={event.settings.coverImageUrl}
+                            alt={event.name}
                             className="w-full h-full object-cover"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-4">
                             <div className="flex items-center justify-between w-full text-white text-xs">
                               <span className="font-semibold flex items-center gap-1.5">
-                                <Video className="w-4 h-4 text-amber-300" />
-                                4K Global Broadcast Channel Active
+                                <Sparkles className="w-4 h-4 text-amber-300" />
+                                {(() => {
+                                  const cd = getCategoryDisplay(event.settings?.ritualType);
+                                  return `${cd.icon} ${cd.label}`;
+                                })()}
                               </span>
-                              <span className="bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px]">
-                                Lakeside Mandap
-                              </span>
+                              {event.settings?.locationName && (
+                                <span className="bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px]">
+                                  {event.settings.locationName}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -505,116 +616,65 @@ export const EventsView: React.FC = () => {
                   {events.length}
                 </span>
                 <span className="text-xs font-bold text-on-surface mt-1">Ceremonies</span>
-                <span className="text-[10px] text-on-surface-variant">Across Festive Days</span>
+                <span className="text-[10px] text-on-surface-variant">Scheduled</span>
               </div>
 
               <div className="p-3 rounded-xl bg-surface-container-low flex flex-col">
                 <span className="font-serif text-3xl font-bold text-secondary leading-none">
-                  450
+                  {days.length}
                 </span>
-                <span className="text-xs font-bold text-on-surface mt-1">RSVP Passports</span>
-                <span className="text-[10px] text-on-surface-variant">QR Turnstile Cleared</span>
+                <span className="text-xs font-bold text-on-surface mt-1">Festive Days</span>
+                <span className="text-[10px] text-on-surface-variant">Multi-Day Timeline</span>
               </div>
 
               <div className="p-3 rounded-xl bg-surface-container-low flex flex-col">
                 <span className="font-serif text-3xl font-bold text-on-surface leading-none">
-                  04
+                  {new Set(events.map(e => e.settings?.locationName || e.venue?.name).filter(Boolean)).size || (currentWedding?.settings?.primaryVenueName ? 1 : 0)}
                 </span>
-                <span className="text-xs font-bold text-on-surface mt-1">Palace Venues</span>
-                <span className="text-[10px] text-on-surface-variant">Mewar Enclaves</span>
+                <span className="text-xs font-bold text-on-surface mt-1">Venues</span>
+                <span className="text-[10px] text-on-surface-variant">Mapped Locations</span>
               </div>
 
               <div className="p-3 rounded-xl bg-surface-container-low flex flex-col">
                 <span className="font-serif text-3xl font-bold text-amber-600 leading-none">
-                  4K
+                  {events.filter(e => e.settings?.isMuhurtham || e.settings?.ritualType === 'VIVAHA').length}
                 </span>
-                <span className="text-xs font-bold text-on-surface mt-1">Broadcast Feeds</span>
-                <span className="text-[10px] text-on-surface-variant">Low-latency CDN</span>
+                <span className="text-xs font-bold text-on-surface mt-1">Muhurthams</span>
+                <span className="text-[10px] text-on-surface-variant">Auspicious Rites</span>
               </div>
-            </div>
-
-            {/* Arrival Flow Mini Projection */}
-            <div className="flex flex-col gap-1 pt-2">
-              <div className="flex justify-between items-center text-xs text-on-surface-variant">
-                <span>Guest Arrival Flow</span>
-                <span className="text-primary font-semibold">Peak: 11:15 AM</span>
-              </div>
-              <svg className="w-full h-12 text-primary" fill="none" viewBox="0 0 280 48" preserveAspectRatio="none">
-                <path
-                  d="M0 40 C 40 38, 70 35, 100 24 C 130 14, 150 4, 175 6 C 200 8, 220 28, 280 32"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M0 40 C 40 38, 70 35, 100 24 C 130 14, 150 4, 175 6 C 200 8, 220 28, 280 32 L 280 48 L 0 48 Z"
-                  fill="currentColor"
-                  fillOpacity="0.08"
-                />
-                <circle cx="175" cy="6" r="3.5" className="fill-secondary" />
-              </svg>
             </div>
           </div>
 
-          {/* Card 2: Ritual Pandit / Celebrant Concierge */}
+          {/* Card 2: Ceremonial Protocol & Vedic Guidelines */}
           <div className="rounded-2xl bg-surface-container-lowest p-5 sm:p-6 border border-outline-variant/40 shadow-sm flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase tracking-wider font-bold text-primary">
-                Ritual Pandit Concierge
+                Ceremonial Protocol &amp; Guidelines
               </span>
               <span className="px-2 py-0.5 rounded bg-primary-fixed text-primary text-[10px] font-bold">
-                Verified Vedic Acharya
+                Vedic Best Practices
               </span>
             </div>
 
-            <div className="flex items-center gap-3 pt-1">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-primary-fixed shrink-0 border border-primary/20">
-                <img
-                  src="https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80"
-                  alt="Pandit Ji"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-serif text-base font-bold text-on-surface">
-                  Pandit Shrikant Shastri
-                </span>
-                <span className="text-xs text-on-surface-variant">
-                  Chief Vedic Acharya • Mewar High Rites
+            <div className="p-3 rounded-xl bg-surface-container-low flex flex-col gap-2.5 text-xs">
+              <div className="flex items-start gap-2">
+                <span className="text-primary font-bold shrink-0">●</span>
+                <span className="text-on-surface-variant">
+                  <strong className="text-on-surface">Shubh Muhurtham:</strong> Mark key sacred rituals as Muhurtham to automatically highlight them on digital invitations and the live stream feed.
                 </span>
               </div>
-            </div>
-
-            <div className="p-3 rounded-xl bg-surface-container-low flex flex-col gap-1.5 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-on-surface-variant">Auspicious Lagna:</span>
-                <span className="font-bold text-on-surface">11:18 AM – 11:42 AM</span>
+              <div className="flex items-start gap-2">
+                <span className="text-secondary font-bold shrink-0">●</span>
+                <span className="text-on-surface-variant">
+                  <strong className="text-on-surface">Dress Code Palette:</strong> Inform your guests of appropriate traditional attire (e.g. Haldi Amber, Midnight Velvet) for each specific event.
+                </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-on-surface-variant">Muhurat Category:</span>
-                <span className="font-bold text-secondary">Abhijit Muhurat (Golden)</span>
+              <div className="flex items-start gap-2">
+                <span className="text-emerald-600 font-bold shrink-0">●</span>
+                <span className="text-on-surface-variant">
+                  <strong className="text-on-surface">Venue Coordination:</strong> Assign specific halls or lawns to guide guests smoothly upon QR check-in arrival.
+                </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-on-surface-variant">Havan Samagri:</span>
-                <span className="font-bold text-emerald-700">100% Sourced & Consecrated</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => alert('Samagri Checklist: 21 Sacred Herbs, Desi Ghee, Gangajal, Rose Petals, Sandalwood Cones, Copper Havan Kund.')}
-                className="flex-1 py-2 rounded-xl bg-surface-container text-on-surface text-xs font-bold hover:bg-surface-container-high transition-colors"
-              >
-                Samagri List
-              </button>
-              <a
-                href="tel:+919876543210"
-                className="flex-1 py-2 rounded-xl bg-primary text-on-primary text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-primary/90 transition-colors shadow-sm"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>Call Acharya</span>
-              </a>
             </div>
           </div>
 
@@ -739,23 +799,222 @@ export const EventsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs uppercase tracking-wider font-semibold text-on-surface-variant block mb-1">
-                  Ritual Category
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs uppercase tracking-wider font-semibold text-on-surface-variant">
+                    Ritual Category
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsManagingCategories(!isManagingCategories);
+                      setEditingCatId(null);
+                      setNewCatName('');
+                    }}
+                    className="text-xs font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    {isManagingCategories ? 'Hide Category Editor' : '+ Add / Edit Custom Category'}
+                  </button>
+                </div>
+
                 <select
                   value={ritualType}
-                  onChange={(e) => setRitualType(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value === '__ADD_NEW__') {
+                      setIsManagingCategories(true);
+                      setEditingCatId(null);
+                      setNewCatName('');
+                    } else {
+                      setRitualType(e.target.value);
+                      if (e.target.value === 'VIVAHA') {
+                        setIsMuhurtham(true);
+                      }
+                    }
+                  }}
                   className="w-full px-3.5 py-2.5 bg-surface-container-low text-on-surface text-sm rounded-xl border border-outline-variant/40 focus:outline-none focus:border-primary"
                 >
-                  <option value="HALDI">☀️ Sacred Haldi & Snanam</option>
-                  <option value="MEHENDI">🌿 Mehendi & Henna Lounge</option>
-                  <option value="SANGEET">💃 Twilight Sangeet & Musical Gala</option>
-                  <option value="VIVAHA">🔥 Vedic Vivaha & Saat Pheras</option>
-                  <option value="RECEPTION">🥂 Royal Reception & Doli Bidaai</option>
-                  <option value="COCKTAIL">🍸 Pre-Wedding Cocktail Night</option>
-                  <option value="OTHER">✨ Custom Family Rite</option>
+                  <optgroup label="Standard Traditions">
+                    {DEFAULT_RITUAL_CATEGORIES.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.icon} {cat.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {customCategories.length > 0 && (
+                    <optgroup label="Your Custom Ritual Categories">
+                      {customCategories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.icon} {cat.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <option value="__ADD_NEW__">➕ + Add New Custom Ritual Category...</option>
                 </select>
+
+                {/* Inline Custom Category Creator / Editor */}
+                {isManagingCategories && (
+                  <div className="mt-3 p-3.5 rounded-xl bg-surface-container border border-primary/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-primary flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 fill-primary" />
+                        {editingCatId ? 'Edit Custom Ritual Category' : 'Create Custom Ritual Category'}
+                      </span>
+                      {editingCatId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingCatId(null);
+                            setNewCatName('');
+                          }}
+                          className="text-[11px] text-on-surface-variant hover:underline"
+                        >
+                          Cancel Editing
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] font-semibold text-on-surface-variant">Choose Icon:</span>
+                        <div className="flex items-center gap-1 p-1 bg-surface-container-lowest rounded-lg border border-outline-variant/40 flex-wrap">
+                          {EMOJI_PALETTE.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={() => setNewCatIcon(emoji)}
+                              className={`w-7 h-7 rounded text-sm flex items-center justify-center transition-all ${
+                                newCatIcon === emoji ? 'bg-primary-fixed text-primary scale-110 font-bold shadow-xs' : 'hover:bg-surface-container'
+                              }`}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newCatName}
+                          onChange={(e) => setNewCatName(e.target.value)}
+                          placeholder="e.g. Pellikuthuru & Talambralu, Anand Karaj, Kashi Yatra..."
+                          className="flex-1 px-3 py-2 bg-surface-container-lowest text-on-surface text-xs rounded-lg border border-outline-variant/40 focus:outline-none focus:border-primary"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newCatName.trim()) return;
+                            if (editingCatId) {
+                              const updated = customCategories.map((c) =>
+                                c.id === editingCatId ? { ...c, label: newCatName.trim(), icon: newCatIcon } : c
+                              );
+                              saveCustomCategories(updated);
+                              setEditingCatId(null);
+                            } else {
+                              const newId = `CUSTOM_${Date.now()}`;
+                              const newCat: RitualCategory = {
+                                id: newId,
+                                label: newCatName.trim(),
+                                icon: newCatIcon,
+                              };
+                              const updated = [...customCategories, newCat];
+                              saveCustomCategories(updated);
+                              setRitualType(newId);
+                            }
+                            setNewCatName('');
+                          }}
+                          disabled={!newCatName.trim()}
+                          className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 shrink-0"
+                        >
+                          {editingCatId ? 'Update' : '+ Save Category'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Manage Existing Custom Categories */}
+                    {customCategories.length > 0 && (
+                      <div className="pt-2 border-t border-outline-variant/30 flex flex-wrap gap-1.5 items-center">
+                        <span className="text-[10px] uppercase font-bold text-on-surface-variant mr-1">
+                          Custom List ({customCategories.length}):
+                        </span>
+                        {customCategories.map((cat) => (
+                          <span
+                            key={cat.id}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container-lowest border border-outline-variant/30 text-xs"
+                          >
+                            <span>{cat.icon}</span>
+                            <span className="font-medium text-on-surface">{cat.label}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingCatId(cat.id);
+                                setNewCatName(cat.label);
+                                setNewCatIcon(cat.icon);
+                              }}
+                              className="text-on-surface-variant hover:text-primary p-0.5"
+                              title="Edit Category"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = customCategories.filter((c) => c.id !== cat.id);
+                                saveCustomCategories(updated);
+                                if (ritualType === cat.id) {
+                                  setRitualType('VIVAHA');
+                                }
+                              }}
+                              className="text-on-surface-variant hover:text-rose-600 p-0.5"
+                              title="Delete Category"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+
+              {/* Shubh Muhurtham Designation Toggle */}
+              <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                    <Flame className="w-3.5 h-3.5 text-secondary fill-secondary" />
+                    Sacred Shubh Muhurtham Ceremony
+                  </span>
+                  <p className="text-[11px] text-on-surface-variant">
+                    Highlights this ceremony with auspicious badges on digital invites &amp; livestream feed
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isMuhurtham}
+                    onChange={(e) => setIsMuhurtham(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-secondary"></div>
+                </label>
+              </div>
+
+              {isMuhurtham && (
+                <div>
+                  <label className="text-xs uppercase tracking-wider font-semibold text-on-surface-variant block mb-1">
+                    Auspicious Muhurtham Exact Time
+                  </label>
+                  <input
+                    type="text"
+                    value={muhurthamTime}
+                    onChange={(e) => setMuhurthamTime(e.target.value)}
+                    placeholder="e.g. 11:24 AM or 09:15 AM - 10:45 AM"
+                    className="w-full px-3.5 py-2.5 bg-surface-container-low text-on-surface text-sm rounded-xl border border-outline-variant/40 focus:outline-none focus:border-primary"
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -809,6 +1068,31 @@ export const EventsView: React.FC = () => {
                   placeholder="e.g. Vedic Imperial Silk & Crimson Turbans"
                   className="w-full px-3.5 py-2.5 bg-surface-container-low text-on-surface text-sm rounded-xl border border-outline-variant/40 focus:outline-none focus:border-primary"
                 />
+              </div>
+
+              <div>
+                <label className="text-xs uppercase tracking-wider font-semibold text-on-surface-variant block mb-1">
+                  Ceremony Backdrop / Cover Image URL (Optional)
+                </label>
+                <input
+                  type="url"
+                  value={coverImageUrl}
+                  onChange={(e) => setCoverImageUrl(e.target.value)}
+                  placeholder="e.g. https://images.unsplash.com/... or leave blank"
+                  className="w-full px-3.5 py-2.5 bg-surface-container-low text-on-surface text-sm rounded-xl border border-outline-variant/40 focus:outline-none focus:border-primary"
+                />
+                {coverImageUrl && (
+                  <div className="mt-2 w-full h-28 rounded-xl overflow-hidden border border-outline-variant/40 relative shadow-sm">
+                    <img
+                      src={coverImageUrl}
+                      alt="Banner Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               <div>

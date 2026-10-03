@@ -5,7 +5,7 @@ import {
 } from './invitation.repository';
 import { InvitationStudioSettings } from './invitation.types';
 import { generateInvitationEmailHtml, generateInvitationEmailText } from './invitation.email';
-import { resend } from '../../infrastructure/resend/client';
+import { emailService } from '../../infrastructure/email/email.service';
 import { config } from '../../config';
 import prisma from '../../infrastructure/prisma/client';
 
@@ -50,10 +50,6 @@ export const invitationService = {
         throw new Error(`Guest "${inv.guest.displayName}" does not have an email address configured.`);
       }
 
-      if (!resend) {
-        throw new Error('Resend email client is not configured. Please set RESEND_API_KEY in backend/.env');
-      }
-
       const guestMeta = (inv.guest.metadata as Record<string, any>) || {};
       const magicToken = guestMeta.magicToken || `tok_${inv.id.replace(/-/g, '').substring(0, 24)}`;
       const appUrl = process.env.APP_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
@@ -65,8 +61,8 @@ export const invitationService = {
         recipientName: inv.guest.displayName,
         recipientEmail: inv.guest.email,
         weddingTitle: inv.wedding.name,
-        coupleNames: weddingSettings.customMonogramText ? `${inv.wedding.name}` : 'Radhika & Aarav',
-        venueName: 'The Leela Palace, Udaipur',
+        coupleNames: weddingSettings.customMonogramText ? `${inv.wedding.name}` : (inv.wedding.name || 'Royal Couple'),
+        venueName: (inv.wedding.settings as any)?.primaryVenueName || 'The Leela Palace, Udaipur',
         magicUrl,
         paxCount: Number(guestMeta.paxCount) || 1,
         allocatedSuite: guestMeta.allocatedSuite || 'Palace Heritage Wing',
@@ -77,48 +73,31 @@ export const invitationService = {
         recipientName: inv.guest.displayName,
         recipientEmail: inv.guest.email,
         weddingTitle: inv.wedding.name,
-        coupleNames: 'Radhika & Aarav',
-        venueName: 'The Leela Palace, Udaipur',
+        coupleNames: (inv.wedding.name || 'Royal Couple'),
+        venueName: (inv.wedding.settings as any)?.primaryVenueName || 'The Leela Palace, Udaipur',
         magicUrl,
         paxCount: Number(guestMeta.paxCount) || 1,
         allocatedSuite: guestMeta.allocatedSuite || 'Palace Heritage Wing',
       });
 
-      const fromAddress = config.resend.emailFrom || 'MakeMyMarriage <onboarding@resend.dev>';
-      const isSandbox = fromAddress.includes('resend.dev');
-      const devOverride = process.env.RESEND_DEV_OVERRIDE_EMAIL || 'vengamunireddy040404@gmail.com';
+      const sendResult = await emailService.sendEmail({
+        to: inv.guest.email,
+        subject: `✨ Royal Vivah Aamantran: Nuptials of ${inv.wedding.name}`,
+        html: emailHtml,
+        text: emailText,
+        recipientName: inv.guest.displayName,
+      });
 
-      // Resend Sandbox Handling:
-      // When using the default onboarding@resend.dev test domain, Resend strictly allows sending only
-      // to the verified account owner. In dev/sandbox mode, we deliver to the owner's inbox for testing!
-      const targetEmail = isSandbox ? devOverride : inv.guest.email;
-      const isRedirected = isSandbox && inv.guest.email.toLowerCase() !== devOverride.toLowerCase();
+      if (!sendResult.success) {
+        throw new Error(`Email dispatch failed: ${sendResult.error || 'Check SMTP/Resend configuration'}`);
+      }
 
-      const subject = isRedirected
-        ? `[Preview for ${inv.guest.displayName}] ✨ Royal Vivah Aamantran: Nuptials of ${inv.wedding.name}`
-        : `✨ Royal Vivah Aamantran: Nuptials of ${inv.wedding.name}`;
-
-      try {
-        const sendResult = await resend.emails.send({
-          from: fromAddress,
-          to: targetEmail,
-          subject,
-          html: emailHtml,
-          text: emailText,
-        });
-
-        if (sendResult.error) {
-          throw new Error(sendResult.error.message);
-        }
-
-        if (isSandbox) {
-          deliveredMessage = `Royal invitation delivered to ${devOverride} (Resend sandbox test for ${inv.guest.displayName})`;
-        } else {
-          deliveredMessage = `Royal digital invitation delivered to ${inv.guest.email}`;
-        }
-      } catch (err: any) {
-        console.error('Resend delivery error:', err);
-        throw new Error(`Email dispatch failed via Resend: ${err.message}`);
+      if (sendResult.channel === 'SMTP') {
+        deliveredMessage = `Royal digital invitation dispatched via SMTP to ${inv.guest.email}`;
+      } else if (sendResult.channel === 'SANDBOX_REDIRECT') {
+        deliveredMessage = `Royal invitation delivered to ${sendResult.deliveredTo} (Resend sandbox preview for ${inv.guest.displayName})`;
+      } else {
+        deliveredMessage = `Royal digital invitation delivered to ${inv.guest.email}`;
       }
     }
 

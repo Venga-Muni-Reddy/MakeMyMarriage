@@ -1,14 +1,14 @@
 import { z } from 'zod';
 
 export const updateStudioSettingsSchema = z.object({
-  activeThemeId: z.string().min(1),
-  verseLanguage: z.enum(['SANSKRIT', 'ENGLISH', 'HINDI', 'TELUGU']),
-  verseText: z.string().min(5).max(1000),
-  verseFont: z.string().min(1),
-  activeSoundscapeId: z.string().min(1),
-  autoplaySoundscape: z.boolean().default(true),
-  activeEventIds: z.array(z.string().uuid()).optional(),
-  customMonogramText: z.string().max(10).optional(),
+  activeThemeId: z.string().optional(),
+  verseLanguage: z.enum(['SANSKRIT', 'ENGLISH', 'HINDI', 'TELUGU']).optional().default('SANSKRIT'),
+  verseText: z.string().max(2000).optional(),
+  verseFont: z.string().optional(),
+  activeSoundscapeId: z.string().optional(),
+  autoplaySoundscape: z.boolean().optional(),
+  activeEventIds: z.array(z.string()).optional(),
+  customMonogramText: z.string().max(30).optional(),
 });
 
 export const singleDispatchSchema = z.object({

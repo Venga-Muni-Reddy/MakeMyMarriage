@@ -185,26 +185,28 @@ export const SettingsView: React.FC = () => {
             <div>
               <span className="text-on-surface-variant block text-[11px] font-medium">Wedding Title</span>
               <span className="font-headline-md font-bold text-base text-on-surface">
-                {currentWedding?.name || 'Royal Vivaha'}
+                {currentWedding?.name || 'No Active Wedding Workspace'}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-1">
               <div>
                 <span className="text-on-surface-variant block text-[11px] font-medium">Workspace Slug</span>
-                <span className="font-mono text-primary font-semibold">/w/{currentWedding?.slug}</span>
+                <span className="font-mono text-primary font-semibold">
+                  {currentWedding?.slug ? `/w/${currentWedding.slug}` : 'Not Published Yet'}
+                </span>
               </div>
               <div>
                 <span className="text-on-surface-variant block text-[11px] font-medium">Primary Venue</span>
                 <span className="font-semibold text-on-surface truncate block">
-                  {currentWedding?.settings?.primaryVenueName || 'The Leela Palace'}
+                  {currentWedding?.settings?.primaryVenueName || currentWedding?.settings?.primaryCity || 'Not Configured'}
                 </span>
               </div>
             </div>
 
             <div className="pt-2 border-t border-outline-variant/20 flex items-center justify-between text-on-surface-variant">
               <span>Workspace ID:</span>
-              <span className="font-mono text-[11px]">{weddingId?.substring(0, 18)}...</span>
+              <span className="font-mono text-[11px]">{weddingId ? `${weddingId.substring(0, 18)}...` : 'None'}</span>
             </div>
           </div>
         </div>

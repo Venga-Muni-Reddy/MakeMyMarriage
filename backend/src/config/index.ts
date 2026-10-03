@@ -29,6 +29,14 @@ export const config = {
     apiKey: process.env.RESEND_API_KEY || '',
     emailFrom: process.env.EMAIL_FROM || 'MakeMyMarriage <invitations@makemymarriage.com>',
   },
+  smtp: {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true', // true for port 465, false for port 587
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.SMTP_FROM || process.env.EMAIL_FROM || 'MakeMyMarriage <invitations@makemymarriage.com>',
+  },
   sse: {
     heartbeatIntervalMs: parseInt(process.env.SSE_HEARTBEAT_INTERVAL_MS || '30000', 10),
   },

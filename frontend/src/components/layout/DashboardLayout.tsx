@@ -25,18 +25,25 @@ import {
   ShieldCheck,
   UtensilsCrossed,
   Tv,
+  Sparkles,
+  CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useWedding } from '../../context/WeddingContext';
+import { weddingService } from '../../services/wedding.service';
 import { notificationService, NotificationItem } from '../../services/notification.service';
 
 export const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { currentWedding, weddings, selectWedding } = useWedding();
+  const { currentWedding, weddings, selectWedding, refreshWeddings } = useWedding();
   const { weddingId } = useParams<{ weddingId: string }>();
   const location = useLocation();
   const base = weddingId ? `/dashboard/${weddingId}` : '/dashboard';
+
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [acceptSuccess, setAcceptSuccess] = useState(false);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -96,19 +103,42 @@ export const DashboardLayout: React.FC = () => {
     navigate(`/dashboard/${targetWeddingId}`);
   };
 
-  const weddingSlug = currentWedding?.slug || 'ananya-rahul';
+  const hasWedding = Boolean(currentWedding);
+  const weddingSlug = currentWedding?.slug || '';
   const coupleTitle = currentWedding?.settings?.partner1Name && currentWedding?.settings?.partner2Name
     ? `${currentWedding.settings.partner1Name} & ${currentWedding.settings.partner2Name}`
-    : currentWedding?.name?.replace(/^The Royal Union of /i, '') || 'Ananya & Rahul';
+    : currentWedding?.name?.replace(/^The Royal Union of /i, '') || (hasWedding ? 'Royal Union' : 'No Active Wedding');
 
   const venueInfo = currentWedding?.settings?.primaryVenueName
     ? `${currentWedding.settings.primaryVenueName} • ${currentWedding.settings.displayDate || 'Auspicious Muhurtham'}`
-    : 'City Palace, Udaipur • Dec 18–20';
+    : (hasWedding ? 'Auspicious Venue' : 'Setup your royal wedding');
 
-  const currentRole =
-    currentWedding?.members?.[0]?.role?.name ||
-    currentWedding?.userRole ||
-    (currentWedding?.ownerId === user?.id ? 'OWNER' : 'ORGANIZER');
+  const currentRole = hasWedding
+    ? (currentWedding?.members?.[0]?.role?.name ||
+       currentWedding?.userRole ||
+       (currentWedding?.ownerId === user?.id ? 'OWNER' : 'ORGANIZER'))
+    : 'NEW HOST';
+
+  const currentMembership = currentWedding?.members?.find(
+    (m: any) => m.userId === user?.id
+  ) || currentWedding?.members?.[0];
+
+  const isPendingInvite = currentMembership?.status === 'INVITED';
+
+  const handleAcceptInvitation = async () => {
+    if (!currentWedding?.id) return;
+    setIsAccepting(true);
+    try {
+      await weddingService.acceptInvitation(currentWedding.id);
+      await refreshWeddings();
+      setAcceptSuccess(true);
+      setTimeout(() => setAcceptSuccess(false), 6000);
+    } catch (err: any) {
+      console.error('Failed to accept council invitation', err);
+    } finally {
+      setIsAccepting(false);
+    }
+  };
 
   const navItems = [
     { label: 'Overview', path: `${base}`, icon: Heart, exact: true },
@@ -119,10 +149,10 @@ export const DashboardLayout: React.FC = () => {
     { label: 'Checklist & Tasks', path: `${base}/tasks`, icon: CheckSquare },
     { label: 'Council & Team', path: `${base}/team`, icon: ShieldCheck, badge: 'RBAC' },
     { label: 'Dispatches & Alerts', path: `${base}/notifications`, icon: Bell, badge: 'Hub' },
-    { label: 'Photo Vault', path: `${base}/gallery`, icon: Camera, badge: '248' },
+    { label: 'Photo Vault', path: `${base}/gallery`, icon: Camera, badge: 'Vault' },
     { label: 'VIP QR Check-in', path: `${base}/checkin`, icon: QrCode },
     { label: 'Live Broadcast', path: `${base}/live`, icon: Tv, badge: '4K Live' },
-    { label: 'Public Website', path: `/w/${weddingSlug}`, icon: Globe, external: false },
+    { label: 'Public Website', path: weddingSlug ? `/w/${weddingSlug}` : '/setup-wedding', icon: Globe, external: false, badge: !weddingSlug ? 'Setup' : undefined },
     { label: 'Settings & Workspace', path: `${base}/settings`, icon: Settings },
   ];
 
@@ -464,39 +494,57 @@ export const DashboardLayout: React.FC = () => {
                   Shubh Vivah Conclave
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                <span className="text-[11px] text-secondary font-medium">Auspicious Day</span>
+                <span className="text-[11px] text-secondary font-medium">
+                  {hasWedding ? 'Active Wedding' : 'New Host'}
+                </span>
               </div>
               <h2 className="font-serif text-xl font-bold text-on-surface">
-                Namaste Radhika, Maharani Suite
+                Namaste {user?.name || 'Wedding Host'}, Maharani Suite
               </h2>
             </div>
 
             {/* Quick Muhurtham Pill */}
-            <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-primary-fixed text-on-primary-fixed shadow-xs text-xs font-semibold">
-              <Clock className="w-3.5 h-3.5 text-primary" />
-              <span>Muhurtham: 14h : 22m : 40s</span>
-            </div>
+            {hasWedding && (
+              <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-primary-fixed text-on-primary-fixed shadow-xs text-xs font-semibold">
+                <Clock className="w-3.5 h-3.5 text-primary" />
+                <span>Muhurtham: {currentWedding?.settings?.displayDate || 'Upcoming'}</span>
+              </div>
+            )}
           </div>
 
           {/* Right Action Icons */}
           <div className="flex items-center space-x-3">
             {/* Share Public Website Pill */}
-            <button
-              onClick={handleCopyLink}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-xs font-semibold text-on-surface transition-all"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-primary" />}
-              <span>{copied ? 'Copied Link!' : '/w/ananya-rahul'}</span>
-            </button>
+            {hasWedding && weddingSlug ? (
+              <>
+                <button
+                  onClick={handleCopyLink}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-xs font-semibold text-on-surface transition-all"
+                  title="Copy Public Wedding Website Link"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-primary" />}
+                  <span>{copied ? 'Copied Link!' : `/w/${weddingSlug}`}</span>
+                </button>
 
-            {/* Live Website Preview */}
-            <Link
-              to="/w/ananya-rahul"
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-xs font-semibold text-on-surface transition-all"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-primary" />
-              <span>Preview Live</span>
-            </Link>
+                <Link
+                  to={`/w/${weddingSlug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-xs font-semibold text-on-surface transition-all"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                  <span>Preview Live</span>
+                </Link>
+              </>
+            ) : (
+              <Link
+                to="/setup-wedding"
+                className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl bg-primary text-on-primary text-xs font-semibold shadow-xs hover:bg-primary/90 transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Inaugurate Wedding</span>
+              </Link>
+            )}
 
             {/* Notifications Dropdown */}
             <div className="relative" ref={notifRef}>
@@ -590,6 +638,54 @@ export const DashboardLayout: React.FC = () => {
             </Link>
           </div>
         </header>
+
+        {/* Council Appointment Pending Acceptance Banner */}
+        {isPendingInvite && (
+          <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#FAF2EE] via-white to-[#FFF9E6] border-2 border-[#D4AF37]/50 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-[#780616] text-[#D4AF37] flex items-center justify-center shrink-0 shadow-md">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#780616]">
+                    ✦ Council Appointment Pending
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#FFF9E6] text-[#B87A00] border border-[#B87A00]/30 uppercase">
+                    {currentMembership?.role?.name?.replace('_', ' ') || currentRole}
+                  </span>
+                </div>
+                <p className="text-sm font-serif font-bold text-[#1E1B19] mt-0.5">
+                  You are invited to join the planning council for {coupleTitle}.
+                </p>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Accept this appointment to activate your planning authority, ceremony timelines, and task checklists.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 shrink-0 w-full md:w-auto justify-end">
+              <button
+                onClick={handleAcceptInvitation}
+                disabled={isAccepting}
+                className="px-5 py-2.5 rounded-xl bg-[#780616] hover:bg-[#8F1633] text-white font-bold text-xs shadow-md flex items-center gap-2 transition-all disabled:opacity-50"
+              >
+                {isAccepting ? (
+                  <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4 text-[#D4AF37]" />
+                )}
+                <span>{isAccepting ? 'Accepting...' : 'Accept Appointment ✦'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {acceptSuccess && (
+          <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-2.5 text-xs font-bold animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>✦ Council Appointment Accepted! You are now an active collaborator for this wedding.</span>
+          </div>
+        )}
 
         {/* Dynamic Nested Route Content */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8">

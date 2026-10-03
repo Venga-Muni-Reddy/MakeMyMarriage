@@ -1,3 +1,4 @@
+import prisma from '../../infrastructure/prisma/client';
 import { livestreamRepository } from './livestream.repository';
 import {
   CreateStreamDto,
@@ -14,76 +15,39 @@ export class LivestreamService {
    */
   async getActiveStream(weddingId: string, eventId?: string): Promise<ActiveStreamResponse> {
     let stream = await livestreamRepository.findStream(weddingId, eventId);
+    const wedding = await prisma.wedding.findUnique({ where: { id: weddingId } });
 
     if (!stream) {
+      const weddingTitle = wedding ? `${wedding.name} — Sacred Mandap & Vivaha Telecast` : 'Sacred Wedding Ceremony & Vivaha Telecast';
+      const cleanSlug = wedding?.slug?.toUpperCase().replace(/[^A-Z0-9]/g, '') || 'MANDAP';
       stream = await livestreamRepository.createStream(weddingId, {
-        title: 'Ananya & Rahul — Sacred Vivaha Pheras • Live from The Leela Palace, Udaipur',
+        title: weddingTitle,
         streamUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', // default demo livestream
         status: 'LIVE',
-        privacy: 'PRIVATE',
-        passcode: 'MEWAR-2026',
+        privacy: 'PUBLIC',
+        passcode: `${cleanSlug}-2026`,
       });
     }
 
     const meta: any = stream.metadata || {};
 
     const defaultRituals: RitualMilestoneItem[] = [
-      { id: 1, name: 'Ganesh Puja', time: '19:30', status: 'COMPLETED', detail: 'Completed' },
-      { id: 2, name: 'Varmala Garland', time: '20:00', status: 'COMPLETED', detail: 'Completed' },
-      { id: 3, name: 'Kanyadaan', time: '20:25', status: 'COMPLETED', detail: 'Completed' },
-      { id: 4, name: 'Saptapadi (7 Vows)', time: 'LIVE NOW', status: 'LIVE', detail: 'Phera 4 / 7 in Motion' },
-      { id: 5, name: 'Sindoor Daan', time: '21:10', status: 'UPCOMING', detail: 'Upcoming' },
-      { id: 6, name: 'Grand Aarti', time: '21:30', status: 'UPCOMING', detail: 'Upcoming' },
-    ];
-
-    const defaultChat: ChatMessageItem[] = [
-      {
-        id: 'msg-1',
-        authorName: 'Vikramaditya Rathore',
-        location: '🇺🇸 San Francisco',
-        time: '19:42',
-        message: 'Wishing both families eternal prosperity and infinite joy! Har Har Mahadev 🙏✨',
-      },
-      {
-        id: 'msg-2',
-        authorName: 'Meera Singhania',
-        location: '🇬🇧 London',
-        time: '19:43',
-        message: 'The rose flower shower was breathtaking! Sending oceans of love to dearest Ananya 💖🌹',
-        isFamily: true,
-      },
-      {
-        id: 'msg-3',
-        authorName: 'Siddharth Roy',
-        location: '🇨🇦 Toronto',
-        time: '19:44',
-        message: 'Crystal clear 4K broadcast quality! Congratulations Rahul bhai, you both look divine!',
-      },
-      {
-        id: 'msg-4',
-        authorName: 'Anjali Sharma',
-        location: '🇦🇪 Dubai',
-        time: '19:45',
-        message: 'So emotional seeing Kanyadaan live. Hugest hugs and best wishes to both couples from Dubai! 🪔🕊️',
-      },
-      {
-        id: 'msg-5',
-        authorName: 'Shailesh Mehta',
-        location: '🇮🇳 Udaipur',
-        time: '19:46',
-        message: 'Flotilla guests arriving safely at the jetty. The Saptapadi mantras are resonating across the lake.',
-      },
+      { id: 1, name: 'Ganesh Puja', time: 'Phase 1', status: 'COMPLETED', detail: 'Completed' },
+      { id: 2, name: 'Varmala Garland', time: 'Phase 2', status: 'COMPLETED', detail: 'Completed' },
+      { id: 3, name: 'Kanyadaan', time: 'Phase 3', status: 'COMPLETED', detail: 'Completed' },
+      { id: 4, name: 'Saptapadi (7 Vows)', time: 'LIVE NOW', status: 'LIVE', detail: 'Sacred Vows in Motion' },
+      { id: 5, name: 'Sindoor Daan', time: 'Phase 5', status: 'UPCOMING', detail: 'Upcoming' },
+      { id: 6, name: 'Grand Aarti', time: 'Phase 6', status: 'UPCOMING', detail: 'Upcoming' },
     ];
 
     const storedChat: ChatMessageItem[] = Array.isArray(meta.chatMessages) ? meta.chatMessages : [];
-    const allChat = [...storedChat, ...defaultChat];
 
     return {
       id: stream.id,
       weddingId: stream.weddingId,
       eventId: stream.eventId,
-      eventName: stream.event?.name || 'Sacred Muhurtham & Pheras',
-      title: stream.title,
+      eventName: stream.event?.name || 'Sacred Vivaha Ceremony',
+      title: stream.title || `${wedding?.name || 'Wedding'} — Sacred Mandap Telecast`,
       provider: stream.provider,
       streamUrl: stream.streamUrl,
       embedUrl: stream.embedUrl || livestreamRepository.toEmbedUrl(stream.streamUrl),
@@ -96,26 +60,26 @@ export class LivestreamService {
         resolution: '4K UHD',
         fps: 60,
         latencySeconds: 1.2,
-        viewerCount: meta.viewerCount || 1420,
-        petalsCount: meta.petalsCount || 18450,
-        viewerBreakdown: {
-          us: 420,
-          uk: 280,
-          ca: 190,
-          ae: 140,
-          in: 390,
+        viewerCount: meta.viewerCount ?? 1,
+        petalsCount: meta.petalsCount ?? 0,
+        viewerBreakdown: meta.viewerBreakdown || {
+          us: 0,
+          uk: 0,
+          ca: 0,
+          ae: 0,
+          in: 1,
         },
-        privacy: meta.privacy || 'PRIVATE',
-        passcode: meta.passcode || 'MEWAR-2026',
+        privacy: meta.privacy || 'PUBLIC',
+        passcode: meta.passcode || 'MANDAP-2026',
       },
-      pinnedBlessing: {
+      pinnedBlessing: meta.pinnedBlessing || {
         quote:
-          '“Ayushman Bhava! Sending our deepest blessings and tears of joy to our grandchildren Ananya & Rahul. The sacred mandap looks sublime across the screen!”',
-        author: 'Dadi & Dada (Harishchandra & Gayatri Mewar)',
-        location: 'London, 🇬🇧',
-        time: '10m ago',
+          '“May the sacred agni illuminate your journey together with infinite love, understanding, and divine blessings.”',
+        author: 'Elders & Family Council',
+        location: 'Global Telecast',
+        time: 'Active',
       },
-      chatMessages: allChat,
+      chatMessages: storedChat,
       rituals: defaultRituals,
     };
   }
@@ -144,13 +108,13 @@ export class LivestreamService {
     const newMsg: ChatMessageItem = {
       id: `bless-${Date.now()}`,
       authorName: dto.authorName || 'Guest of Honor',
-      location: dto.location || '🇮🇳 Royal Mandap',
+      location: dto.location || 'Wedding Guest',
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       message: dto.message,
       isFamily: dto.isFamily,
     };
 
-    const currentPetals = (meta.petalsCount || 18450) + 50;
+    const currentPetals = (meta.petalsCount || 0) + 50;
     const updatedMeta = {
       ...meta,
       petalsCount: currentPetals,
@@ -169,7 +133,7 @@ export class LivestreamService {
     if (!stream) throw new Error('Live stream not found');
 
     const meta: any = stream.metadata || {};
-    const newTotal = (meta.petalsCount || 18450) + count;
+    const newTotal = (meta.petalsCount || 0) + count;
     await livestreamRepository.updateMetadata(stream.id, {
       ...meta,
       petalsCount: newTotal,

@@ -1,6 +1,7 @@
 import prisma from '../../infrastructure/prisma/client';
-import { resend } from '../../infrastructure/resend/client';
+import { emailService } from '../../infrastructure/email/email.service';
 import { config } from '../../config';
+import { BadRequestError } from '../../shared/errors/api-error';
 import { notificationRepository } from './notification.repository';
 import {
   NotificationChannel,
@@ -66,39 +67,19 @@ export class NotificationService {
         actionUrl: data.payload?.actionUrl,
       });
 
-      if (resend) {
-        const fromAddress = config.resend.emailFrom || 'MakeMyMarriage <onboarding@resend.dev>';
-        const isSandbox = fromAddress.includes('resend.dev');
-        const devOverride = process.env.RESEND_DEV_OVERRIDE_EMAIL || 'vengamunireddy040404@gmail.com';
-        const targetEmail = isSandbox ? devOverride : data.recipientEmail;
+      const sendResult = await emailService.sendEmail({
+        to: data.recipientEmail,
+        subject: data.subject || '✨ Royal Vivaha Dispatch',
+        html: emailHtml,
+        text: emailText,
+        recipientName: data.recipientName,
+      });
 
-        const subject =
-          isSandbox && data.recipientEmail.toLowerCase() !== devOverride.toLowerCase()
-            ? `[Preview for ${data.recipientName || data.recipientEmail}] ${data.subject || '✨ Royal Vivaha Dispatch'}`
-            : data.subject || '✨ Royal Vivaha Dispatch';
-
-        try {
-          const res = await resend.emails.send({
-            from: fromAddress,
-            to: targetEmail,
-            subject,
-            html: emailHtml,
-            text: emailText,
-          });
-
-          if (res.error) {
-            deliveryStatus = 'FAILED';
-            errorDetail = res.error.message;
-          } else {
-            deliveryStatus = 'DELIVERED';
-          }
-        } catch (err: any) {
-          deliveryStatus = 'FAILED';
-          errorDetail = err.message || 'Resend network error';
-        }
-      } else {
-        // Mock delivery in local dev when RESEND_API_KEY is not set
+      if (sendResult.success) {
         deliveryStatus = 'DELIVERED';
+      } else {
+        deliveryStatus = 'FAILED';
+        errorDetail = sendResult.error || 'Email dispatch failed';
       }
     }
 
@@ -254,13 +235,7 @@ export class NotificationService {
     }
 
     if (recipients.length === 0) {
-      // Fallback: If no guests yet exist in the selected segment, create a preview recipient so dispatch can be previewed
-      recipients.push({
-        name: 'Esteemed Guest',
-        email: 'guest@mewarpalace.in',
-        phone: '+91 98290 12345',
-        passCode: 'MMM-VIP01',
-      });
+      throw new BadRequestError('No eligible recipients found in the selected guest segment.');
     }
 
     const createdNotifications = [];
@@ -400,18 +375,10 @@ export class NotificationService {
     }
   ) {
     const list = await notificationRepository.findMany(weddingId, filters);
-    if (list.length === 0) {
-      // Auto-seed sample royal notifications so the ledger is rich upon first view
-      return this.seedSampleNotifications(weddingId);
-    }
     return list;
   }
 
   async getTelemetry(weddingId: string): Promise<NotificationTelemetryDTO> {
-    const list = await notificationRepository.findMany(weddingId, { limit: 1 });
-    if (list.length === 0) {
-      await this.seedSampleNotifications(weddingId);
-    }
     return notificationRepository.getTelemetry(weddingId);
   }
 
@@ -452,81 +419,6 @@ export class NotificationService {
    * Seeds traditional royal dispatches for Udaipur heritage demonstration.
    */
   async seedSampleNotifications(weddingId: string) {
-    const seeds = [
-      {
-        type: 'INVITATION_DISPATCH' as NotificationType,
-        channel: 'WHATSAPP' as NotificationChannel,
-        status: 'DELIVERED' as NotificationStatus,
-        subject: '👑 Royal Vivah Aamantran: Digital Pass & Monogram Dispatch',
-        recipientName: 'Devendra Singh Mewar',
-        recipientPhone: '+91 98290 11001',
-        message: 'Your royal digital pass for the Destination Vivaha of Ananya & Rahul at The Leela Palace Udaipur is ready.',
-        actionUrl: 'https://makemymarriage.com/invite/tok_udaipur_mewar',
-        passCode: 'MMM-VIP01',
-      },
-      {
-        type: 'RSVP_CONFIRMATION' as NotificationType,
-        channel: 'EMAIL' as NotificationChannel,
-        status: 'DELIVERED' as NotificationStatus,
-        subject: '✨ Royal Banquet RSVP Confirmed: Palace Suite Allocated',
-        recipientName: 'Princess Radhika',
-        recipientEmail: 'radhika@royalhouse.in',
-        message: 'Your RSVP attendance for Sangeet & Mandap Vivaha has been inscribed with Pure Vegetarian Rajasthani banquet preference.',
-        actionUrl: 'https://makemymarriage.com/w/ananya-rahul-2026',
-        passCode: 'MMM-RAD08',
-      },
-      {
-        type: 'COUNTDOWN_REMINDER' as NotificationType,
-        channel: 'WHATSAPP' as NotificationChannel,
-        status: 'DELIVERED' as NotificationStatus,
-        subject: '⏰ Shubh Muhurtham Alert: T-48 Hours to Royal Haldi & Sangeet',
-        recipientName: 'Maharaj Vikramaditya',
-        recipientPhone: '+91 98290 22002',
-        message: 'Bansi Ghat lake catamarans will depart for Jagmandir Island at 4:30 PM. Royal Dress Code: Imperial Saffron & Sunset Rose.',
-        actionUrl: 'https://makemymarriage.com/w/ananya-rahul-2026',
-        passCode: 'MMM-OAPW8',
-      },
-      {
-        type: 'TASK_ASSIGNED' as NotificationType,
-        channel: 'EMAIL' as NotificationChannel,
-        status: 'SENT' as NotificationStatus,
-        subject: '📋 Council Milestone Delegated: Flotilla Logistics Sync',
-        recipientName: 'Muni Reddy (Lead Planner)',
-        recipientEmail: 'muni@royaleventsindia.com',
-        message: 'You have been assigned as lead steward for Lake Pichola ferry manifests and royal security clearance.',
-        actionUrl: 'https://makemymarriage.com/dashboard/tasks',
-      },
-      {
-        type: 'BROADCAST_ANNOUNCEMENT' as NotificationType,
-        channel: 'WHATSAPP' as NotificationChannel,
-        status: 'DELIVERED' as NotificationStatus,
-        subject: '🪔 Welcome Decree from The Leela Palace & Jagmandir Island',
-        recipientName: 'Shailesh Mehta',
-        recipientPhone: '+91 98290 33003',
-        message: 'Luggage concierge tag sync complete. All guests arriving via Maharana Pratap Airport will receive dedicated royal chauffeur transfers.',
-        passCode: 'MMM-LUX99',
-      },
-    ];
-
-    for (const s of seeds) {
-      await notificationRepository.create({
-        weddingId,
-        type: s.type,
-        channel: s.channel,
-        status: s.status,
-        subject: s.subject,
-        payload: {
-          recipientName: s.recipientName,
-          recipientPhone: s.recipientPhone,
-          recipientEmail: s.recipientEmail,
-          message: s.message,
-          passCode: s.passCode,
-          actionUrl: s.actionUrl,
-        },
-        sentAt: new Date(),
-      });
-    }
-
     return notificationRepository.findMany(weddingId);
   }
 }

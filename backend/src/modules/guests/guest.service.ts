@@ -4,12 +4,6 @@ import { NotFoundError } from '../../shared/errors/api-error';
 
 export const guestService = {
   async getGuests(weddingId: string, filters: GuestQueryFilters) {
-    // If wedding has 0 guests, auto-seed the royal Rajputana household roster
-    const countCheck = await guestRepository.findMany(weddingId, { limit: 1 });
-    if (countCheck.total === 0) {
-      await guestRepository.seedSampleGuests(weddingId);
-    }
-
     const [result, telemetry, categories] = await Promise.all([
       guestRepository.findMany(weddingId, filters),
       guestRepository.calculateTelemetry(weddingId),

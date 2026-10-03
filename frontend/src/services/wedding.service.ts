@@ -110,4 +110,9 @@ export const weddingService = {
     const res: any = await api.post(`/weddings/${weddingId}/members`, { email, role });
     return res?.data ?? res;
   },
+
+  async acceptInvitation(weddingId: string): Promise<any> {
+    const res: any = await api.post(`/weddings/${weddingId}/members/accept`);
+    return res?.data ?? res;
+  },
 };
