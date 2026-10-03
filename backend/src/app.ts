@@ -15,11 +15,26 @@ import { NotFoundError } from './shared/errors/api-error';
 export function createApp(): Express {
   const app = express();
 
+  // Trust reverse proxy (Vercel / Cloudflare / Render) for rate-limiting & IP resolution
+  app.set('trust proxy', 1);
+
   // Basic security and telemetry
   app.use(helmet({ contentSecurityPolicy: false })); // Permissive CSP for swagger docs
   app.use(
     cors({
-      origin: config.corsOrigin,
+      origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin) return callback(null, true);
+        if (
+          config.corsOrigin === '*' ||
+          origin === config.corsOrigin ||
+          origin.includes('localhost') ||
+          origin.endsWith('.vercel.app')
+        ) {
+          return callback(null, true);
+        }
+        return callback(null, origin);
+      },
       credentials: true,
     })
   );
