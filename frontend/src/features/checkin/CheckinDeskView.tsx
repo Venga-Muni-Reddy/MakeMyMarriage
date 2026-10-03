@@ -314,7 +314,7 @@ export const CheckinDeskView: React.FC = () => {
       {/* ========================================================================= */}
       {/* 1. TOP HEADER & TELEMETRY COMMAND BAR                                     */}
       {/* ========================================================================= */}
-      <section className="w-full px-4 sm:px-6 lg:px-8 pt-6 pb-4 border-b border-[#E9E1DD]/70 bg-white/70 backdrop-blur-md sticky top-0 z-30">
+      <section className="w-full px-4 sm:px-6 lg:px-8 pt-6 pb-6 border-b border-[#E9E1DD]/70 bg-white shadow-sm">
         <div className="max-w-[1440px] mx-auto flex flex-col gap-4">
           {/* Breadcrumb & Shloka Banner */}
           <div className="flex flex-wrap items-center justify-between gap-3">
