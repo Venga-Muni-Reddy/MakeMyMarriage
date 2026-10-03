@@ -61,12 +61,40 @@ export const PhotoVaultView: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadCeremony, setUploadCeremony] = useState('Sacred Muhurtham');
   const [uploadCaption, setUploadCaption] = useState('');
   const [uploadVisibility, setUploadVisibility] = useState<PhotoVisibility>('PUBLIC');
   const [uploadGuestCredit, setUploadGuestCredit] = useState('');
   const [uploadTableNumber, setUploadTableNumber] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // File size & format validation rules
+  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB Cloudinary free tier limit
+  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/gif'];
+  const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.gif'];
+
+  const handleFileSelection = (file: File | undefined) => {
+    if (!file) return;
+    if (file.size > MAX_FILE_SIZE) {
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      setUploadError(`File is too large (${mb} MB). Maximum allowed photo size is 25 MB.`);
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
+    const validMime = ALLOWED_MIME.includes(file.type.toLowerCase());
+    const validExt = ALLOWED_EXTENSIONS.includes(ext);
+    if (!validMime && !validExt) {
+      setUploadError('Unsupported file format. Please upload JPG, PNG, WebP, or HEIC images.');
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    setUploadError(null);
+    setSelectedFile(file);
+  };
 
   // Fetch photos & telemetry
   const loadGalleryData = async () => {
@@ -738,10 +766,8 @@ export const PhotoVaultView: React.FC = () => {
                   <input
                     type="file"
                     ref={fileInputRef}
-                    onChange={(e) => {
-                      if (e.target.files?.[0]) setSelectedFile(e.target.files[0]);
-                    }}
-                    accept="image/*"
+                    onChange={(e) => handleFileSelection(e.target.files?.[0])}
+                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
                     className="hidden"
                   />
                   <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center text-[#780616] group-hover:scale-110 transition-transform shadow-md mb-3 border border-[#E9E1DD]">
@@ -751,7 +777,7 @@ export const PhotoVaultView: React.FC = () => {
                     {selectedFile ? selectedFile.name : 'Drag & Drop Master Files or Browse'}
                   </p>
                   <p className="text-xs text-[#827566] max-w-sm mt-1">
-                    Supports JPG, PNG, HEIC, WebP up to 50MB. Automatic EXIF date & camera metadata extraction enabled.
+                    Supports JPG, PNG, HEIC, WebP up to 25MB. Automatic EXIF date & camera metadata extraction enabled.
                   </p>
                   <button
                     type="button"
@@ -760,6 +786,14 @@ export const PhotoVaultView: React.FC = () => {
                     {selectedFile ? 'Change Selected File' : 'Choose Files from Device'}
                   </button>
                 </div>
+
+                {/* Validation Error Banner */}
+                {uploadError && (
+                  <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center gap-2">
+                    <span className="font-bold">Notice:</span>
+                    <span>{uploadError}</span>
+                  </div>
+                )}
 
                 {/* Progress indicator during upload */}
                 {isUploading && (

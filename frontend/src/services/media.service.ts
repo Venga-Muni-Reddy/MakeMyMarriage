@@ -210,6 +210,13 @@ export class MediaService {
     height: number;
     bytes: number;
   }> {
+    // Guard against oversized uploads (25MB Cloudinary limit)
+    const MAX_SIZE = 25 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      throw new Error(`File size (${mb} MB) exceeds maximum allowed limit of 25 MB.`);
+    }
+
     if (sig.isMockMode) {
       // Simulate fast direct upload progression
       return new Promise((resolve) => {

@@ -16,14 +16,38 @@ export const GuestPhotoUploadView: React.FC = () => {
   const [caption, setCaption] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSuccess, setIsSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
+  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/gif'];
+  const ALLOWED_EXT = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.gif'];
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE) {
+        const mb = (file.size / (1024 * 1024)).toFixed(1);
+        setFileError(`Photo is too large (${mb} MB). Maximum size is 25 MB.`);
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+      const ext = '.' + (file.name.split('.').pop() || '').toLowerCase();
+      const validMime = ALLOWED_MIME.includes(file.type.toLowerCase());
+      const validExt = ALLOWED_EXT.includes(ext);
+      if (!validMime && !validExt) {
+        setFileError('Unsupported file type. Please upload a JPG, PNG, WebP, or HEIC photo.');
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+      setFileError(null);
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
       setIsSuccess(false);
@@ -141,7 +165,7 @@ export const GuestPhotoUploadView: React.FC = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif"
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -166,11 +190,18 @@ export const GuestPhotoUploadView: React.FC = () => {
                     Tap to Open Camera or Photo Library
                   </p>
                   <p className="text-[11px] text-[#827566] mt-1">
-                    High-res photos accepted (JPG, PNG, HEIC)
+                    High-res photos accepted (JPG, PNG, HEIC up to 25MB)
                   </p>
                 </div>
               )}
             </div>
+
+            {/* Error Notice */}
+            {fileError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+                {fileError}
+              </div>
+            )}
 
             {/* Table Number & Guest Name */}
             <div className="grid grid-cols-2 gap-3">
