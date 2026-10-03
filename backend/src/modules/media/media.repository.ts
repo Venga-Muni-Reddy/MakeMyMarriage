@@ -12,8 +12,18 @@ export class MediaRepository {
       deletedAt: null,
     };
 
+    const isUuid = (str?: string) =>
+      typeof str === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+
     if (filter.eventId && filter.eventId !== 'all') {
-      where.eventId = filter.eventId;
+      if (isUuid(filter.eventId)) {
+        where.eventId = filter.eventId;
+      } else {
+        where.event = {
+          name: { contains: filter.eventId, mode: 'insensitive' },
+        };
+      }
     }
 
     if (filter.visibility) {
@@ -143,15 +153,44 @@ export class MediaRepository {
       },
     });
 
+    const isUuid = (str?: string) =>
+      typeof str === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+
+    let resolvedEventId: string | null = null;
+    if (dto.eventId) {
+      if (isUuid(dto.eventId)) {
+        resolvedEventId = dto.eventId;
+      } else {
+        const ev = await prisma.event.findFirst({
+          where: {
+            weddingId,
+            name: { contains: dto.eventId, mode: 'insensitive' },
+          },
+          select: { id: true },
+        });
+        resolvedEventId = ev?.id || null;
+      }
+    }
+
+    let resolvedUserId: string | null = null;
+    if (uploaderUserId && isUuid(uploaderUserId)) {
+      const userExists = await prisma.user.findUnique({
+        where: { id: uploaderUserId },
+        select: { id: true },
+      });
+      if (userExists) resolvedUserId = userExists.id;
+    }
+
     const photo = await prisma.photo.create({
       data: {
         weddingId,
-        eventId: dto.eventId || null,
-        uploadedByUserId: uploaderUserId || null,
-        uploadedByGuestId: uploaderGuestId || dto.uploadedByGuestId || null,
+        eventId: resolvedEventId,
+        uploadedByUserId: resolvedUserId,
+        uploadedByGuestId: uploaderGuestId && isUuid(uploaderGuestId) ? uploaderGuestId : null,
         mediaAssetId: mediaAsset.id,
         visibility: dto.visibility || PhotoVisibility.PUBLIC,
-        moderationStatus: uploaderUserId
+        moderationStatus: resolvedUserId
           ? PhotoModerationStatus.APPROVED
           : PhotoModerationStatus.PENDING,
         caption: dto.caption || null,

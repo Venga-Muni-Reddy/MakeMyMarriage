@@ -191,7 +191,7 @@ export const PhotoVaultView: React.FC = () => {
         height: uploadResult.height,
         bytes: uploadResult.bytes,
         caption: uploadCaption || selectedFile.name.replace(/\.[^/.]+$/, ''),
-        eventId: selectedAlbum !== 'all' ? selectedAlbum : undefined,
+        eventId: uploadCeremony || (selectedAlbum !== 'all' ? selectedAlbum : undefined),
         visibility: uploadVisibility,
         guestName: uploadGuestCredit || currentWedding?.name || 'Wedding Host',
         tableNumber: uploadTableNumber || undefined,
@@ -207,9 +207,9 @@ export const PhotoVaultView: React.FC = () => {
       // Refresh stats
       const stats = await mediaService.getTelemetry(activeWeddingId);
       setTelemetry(stats);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload failed:', err);
-      alert('Upload failed. Please check file format and try again.');
+      alert(err?.message || 'Upload failed. Please check file format and Cloudinary credentials.');
     } finally {
       setIsUploading(false);
     }
