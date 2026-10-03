@@ -29,14 +29,15 @@ Following **Section 116 (Recommended Build Order)** of the System Design Archite
 | **9** | **Wedding Team & Collaborator Role Permissions** | `weddings` + `roles` | ✅ **COMPLETED** | Weddings |
 | **10** | **Email/WhatsApp Notifications & Reminders** | `notifications` | ✅ **COMPLETED** | Weddings |
 | **11** | **Cloudinary Photo Vault & Guest Media Gallery** | `media` + `photos` | ✅ **COMPLETED** | Weddings |
-| **12** | **Real-Time QR Check-in & Banquet Access** | `checkins` + `access` | 🟡 **NEXT UP** | Weddings |
+| **12** | **Real-Time QR Check-in & Banquet Access** | `checkins` + `access` | ✅ **COMPLETED** | Weddings |
+| **13** | **YouTube Live Stream & Virtual Pheras Broadcast** | `livestream` + `broadcast` | 🟡 **NEXT UP** | Events |
 
 ---
 
-## 🎯 Next Feature to Build: Feature 12 — Real-Time QR Check-in & Banquet Access
+## 🎯 Next Feature to Build: Feature 13 — YouTube Live Stream & Virtual Pheras Broadcast
 
-### Why QR Check-in Next?
-Now that guests have their digital passes, ceremonial agendas, and photo streams, the next logical milestone is wedding-day guest arrival management: scanning QR passes at gate entrances, verifying ceremony access permissions, tracking dietary badges, and updating check-in telemetry in real time.
+### Why Live Streaming Next?
+Now that the imperial gate check-in desk, guest seating allocation, and photo vault are operational, remote relatives and global guests who cannot travel to Udaipur need high-definition access to the live Vedic ceremonies (Pheras, Sangeet, Muhurtham). Feature 13 provides real-time YouTube/HLS live streaming, interactive guest blessings chat, and remote prayer shlokas.
 
 ---
 

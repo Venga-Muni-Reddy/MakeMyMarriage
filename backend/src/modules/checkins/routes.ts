@@ -1,19 +1,27 @@
-import { Router, Request, Response } from 'express';
-import { ApiResponse } from '../../shared/response/api-response';
+import { Router } from 'express';
+import { checkinController } from './checkin.controller';
+import { checkinService } from './checkin.service';
+import { checkinRepository } from './checkin.repository';
 
-export class CheckinController {
-  getEntries = async (_req: Request, res: Response) => {
-    return ApiResponse.success(res, { message: 'List check-in entries endpoint scaffolded', data: [] });
-  };
-  checkInGuest = async (_req: Request, res: Response) => {
-    return ApiResponse.created(res, null, 'Check-in guest endpoint scaffolded');
-  };
-}
-
-export const checkinController = new CheckinController();
-export const checkinService = {};
-export const checkinRepository = {};
+export { checkinController, checkinService, checkinRepository };
 
 export const checkinRouter = Router({ mergeParams: true });
+
+// QR Pass Scan & Validation
+checkinRouter.post('/scan', checkinController.scanPass);
+
+// Confirm Gate Clearance
+checkinRouter.post('/confirm', checkinController.confirmCheckIn);
+
+// Manual Walk-in Registration
+checkinRouter.post('/walk-in', checkinController.manualWalkIn);
+
+// Gate Telemetry & Counts
+checkinRouter.get('/telemetry', checkinController.getTelemetry);
+
+// Recent Chronological Ledger
+checkinRouter.get('/ledger', checkinController.getLedger);
+
+// Root aliases
 checkinRouter.get('/', checkinController.getEntries);
 checkinRouter.post('/', checkinController.checkInGuest);

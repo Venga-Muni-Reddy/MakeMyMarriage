@@ -17,9 +17,7 @@ import { CollaboratorsView } from '../features/collaborators/CollaboratorsView';
 import { NotificationHubView } from '../features/notifications/NotificationHubView';
 import { PhotoVaultView } from '../features/gallery/PhotoVaultView';
 import { GuestPhotoUploadView } from '../features/gallery/GuestPhotoUploadView';
-import {
-  CheckinView,
-} from '../features/views';
+import { CheckinDeskView } from '../features/checkin/CheckinDeskView';
 
 export const router = createBrowserRouter([
   {
@@ -64,7 +62,10 @@ export const router = createBrowserRouter([
       { path: 'gallery', element: <PhotoVaultView /> },
       { path: 'photos', element: <PhotoVaultView /> },
       { path: 'media', element: <PhotoVaultView /> },
-      { path: 'checkin', element: <CheckinView /> },
+      { path: 'checkin', element: <CheckinDeskView /> },
+      { path: 'checkins', element: <CheckinDeskView /> },
+      { path: 'gate', element: <CheckinDeskView /> },
+      { path: 'access', element: <CheckinDeskView /> },
       { path: 'settings', element: <SettingsView /> },
       {
         path: 'website',
