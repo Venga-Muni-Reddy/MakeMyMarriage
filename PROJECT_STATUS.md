@@ -1,9 +1,9 @@
 # MakeMyMarriage — Project Status & Feature Roadmap
 
 **Version:** 1.0  
-**Current Phase:** Feature 10 Complete (Email/WhatsApp Notifications & Reminders) → Commencing Feature 11 (Cloudinary Photo Vault & Guest Media Gallery)  
+**Current Phase:** Feature 11 Complete (Cloudinary Photo Vault & Guest Media Gallery) → Commencing Feature 12 (Real-Time QR Check-in & Banquet Access)  
 **Architecture:** Modular Monolith (PostgreSQL + Prisma + Express + React + Tailwind + SSE)  
-**Last Updated:** 2026-10-02  
+**Last Updated:** 2026-10-03  
 
 ---
 
@@ -28,14 +28,15 @@ Following **Section 116 (Recommended Build Order)** of the System Design Archite
 | **8** | **Task Management & Wedding Planning Checklist** | `tasks` + `planning` | ✅ **COMPLETED** | Weddings |
 | **9** | **Wedding Team & Collaborator Role Permissions** | `weddings` + `roles` | ✅ **COMPLETED** | Weddings |
 | **10** | **Email/WhatsApp Notifications & Reminders** | `notifications` | ✅ **COMPLETED** | Weddings |
-| **11** | **Cloudinary Photo Vault & Guest Media Gallery** | `media` + `photos` | 🟡 **NEXT UP** | Weddings |
+| **11** | **Cloudinary Photo Vault & Guest Media Gallery** | `media` + `photos` | ✅ **COMPLETED** | Weddings |
+| **12** | **Real-Time QR Check-in & Banquet Access** | `checkins` + `access` | 🟡 **NEXT UP** | Weddings |
 
 ---
 
-## 🎯 Next Feature to Build: Feature 11 — Cloudinary Photo Vault & Guest Media Gallery
+## 🎯 Next Feature to Build: Feature 12 — Real-Time QR Check-in & Banquet Access
 
-### Why Photo Vault Next?
-With the notification engine and guest communications established, the next core milestone is the royal media vault and guest photo collection stream, supporting guest photo uploads, QR-code based photo sharing, ceremony album organization, and Cloudinary-powered asset storage.
+### Why QR Check-in Next?
+Now that guests have their digital passes, ceremonial agendas, and photo streams, the next logical milestone is wedding-day guest arrival management: scanning QR passes at gate entrances, verifying ceremony access permissions, tracking dietary badges, and updating check-in telemetry in real time.
 
 ---
 
@@ -96,8 +97,9 @@ With the notification engine and guest communications established, the next core
 | **2026-10-02** | **Feature 8: Task Management & Planning** | Comprehensive planning checklist, categories, due dates, assignments, and progress analytics. |
 | **2026-10-02** | **Feature 9: Collaborator RBAC Suite** | Multi-user roles (Owner, Co-Planner, Coordinator, Viewer), email invitations, and permission enforcement. |
 | **2026-10-02** | **Feature 10: Multi-Channel Notifications** | Royal Notification Hub, Resend email dispatch, WhatsApp simulation, countdown reminder triggers, top-bar interactive alert center, broadcast composer, and dispatch ledger. |
+| **2026-10-03** | **Feature 11: Cloudinary Photo Vault** | Direct Cloudinary upload signature adapter, Shubh Smriti responsive masonry gallery, ritual albums carousel, banquet table QR stream banner, curator moderation desk, full-screen 4K lightbox, and mobile-first guest photo upload page. |
 
 ---
 
 > [!NOTE]  
-> **Status:** Features 1–10 completed, tested, and running cleanly on local dev servers. Proceeding to Feature 11 (Cloudinary Photo Vault & Guest Media Gallery).
+> **Status:** Features 1–11 completed, tested, and running cleanly on local dev servers. Proceeding to Feature 12 (Real-Time QR Check-in & Banquet Access).

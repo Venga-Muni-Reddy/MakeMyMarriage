@@ -15,8 +15,9 @@ import { SettingsView } from '../features/settings/SettingsView';
 import { TasksView } from '../features/tasks/TasksView';
 import { CollaboratorsView } from '../features/collaborators/CollaboratorsView';
 import { NotificationHubView } from '../features/notifications/NotificationHubView';
+import { PhotoVaultView } from '../features/gallery/PhotoVaultView';
+import { GuestPhotoUploadView } from '../features/gallery/GuestPhotoUploadView';
 import {
-  GalleryView,
   CheckinView,
 } from '../features/views';
 
@@ -60,7 +61,9 @@ export const router = createBrowserRouter([
       { path: 'notifications', element: <NotificationHubView /> },
       { path: 'dispatches', element: <NotificationHubView /> },
       { path: 'alerts', element: <NotificationHubView /> },
-      { path: 'gallery', element: <GalleryView /> },
+      { path: 'gallery', element: <PhotoVaultView /> },
+      { path: 'photos', element: <PhotoVaultView /> },
+      { path: 'media', element: <PhotoVaultView /> },
       { path: 'checkin', element: <CheckinView /> },
       { path: 'settings', element: <SettingsView /> },
       {
@@ -77,6 +80,14 @@ export const router = createBrowserRouter([
   {
     path: '/w/:slug',
     element: <PublicWeddingWebsiteView />,
+  },
+  {
+    path: '/w/:slug/upload-photos',
+    element: <GuestPhotoUploadView />,
+  },
+  {
+    path: '/gallery/upload',
+    element: <GuestPhotoUploadView />,
   },
   {
     path: '/invite/:token',
