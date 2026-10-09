@@ -409,7 +409,7 @@ export const DashboardLayout: React.FC = () => {
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex">
-          <div className="w-72 bg-surface-container-lowest h-full p-4 flex flex-col justify-between shadow-2xl">
+          <div className="w-72 bg-surface-container-lowest h-full p-4 flex flex-col justify-between shadow-2xl overflow-y-auto">
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
                 <span className="font-serif text-lg font-bold text-primary">Imperial Concierge</span>
@@ -476,6 +476,19 @@ export const DashboardLayout: React.FC = () => {
                   );
                 })}
               </nav>
+            </div>
+            <div className="pt-3 mt-3 border-t border-outline-variant/30 space-y-2">
+              <div className="px-1 text-[11px] text-on-surface-variant truncate">{user?.name || 'Signed in'}</div>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleSignOut();
+                }}
+                className="w-full flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-surface-container text-secondary hover:bg-surface-container-high"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign out</span>
+              </button>
             </div>
           </div>
         </div>
