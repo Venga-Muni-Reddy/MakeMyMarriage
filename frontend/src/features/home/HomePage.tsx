@@ -464,40 +464,35 @@ export const HomePage: React.FC = () => {
         {/* 3. SACRED RITUALS RIBBON BANNER */}
         {/* ========================================================================= */}
         <section id="rituals" className="w-full bg-surface-container-low py-4 shadow-sm overflow-hidden border-y border-outline-variant/40">
-          <div className="max-w-7xl mx-auto px-4 flex items-center justify-between text-center overflow-x-auto gap-8 no-scrollbar">
-            <div className="flex items-center space-x-2 shrink-0">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="font-serif text-lg font-semibold text-primary">Haldi</span>
-            </div>
-            <span className="text-outline-variant text-sm shrink-0">✦</span>
-            <div className="flex items-center space-x-2 shrink-0">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="font-serif text-lg font-semibold text-primary">Mehendi</span>
-            </div>
-            <span className="text-outline-variant text-sm shrink-0">✦</span>
-            <div className="flex items-center space-x-2 shrink-0">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="font-serif text-lg font-semibold text-primary">Sangeet</span>
-            </div>
-            <span className="text-outline-variant text-sm shrink-0">✦</span>
-            <div className="flex items-center space-x-2 shrink-0">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="font-serif text-lg font-semibold text-primary">Baraat</span>
-            </div>
-            <span className="text-outline-variant text-sm shrink-0">✦</span>
-            <div className="flex items-center space-x-2 shrink-0">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="font-serif text-lg font-semibold text-primary">Auspicious Pheras</span>
-            </div>
-            <span className="text-outline-variant text-sm shrink-0">✦</span>
-            <div className="flex items-center space-x-2 shrink-0">
-              <Clock className="w-4 h-4 text-primary" />
-              <span className="font-serif text-lg font-semibold text-primary">Muhurtham</span>
-            </div>
-            <span className="text-outline-variant text-sm shrink-0">✦</span>
-            <div className="flex items-center space-x-2 shrink-0">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="font-serif text-lg font-semibold text-primary">Reception Gala</span>
+          <style>{`
+            @keyframes mmm-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+            .mmm-marquee-track { display: flex; width: max-content; animation: mmm-marquee 28s linear infinite; }
+            .mmm-marquee:hover .mmm-marquee-track, .mmm-marquee:active .mmm-marquee-track { animation-play-state: paused; }
+            @media (prefers-reduced-motion: reduce) { .mmm-marquee-track { animation: none; } .mmm-marquee { overflow-x: auto; } }
+          `}</style>
+          <div className="mmm-marquee overflow-hidden" aria-label="Wedding ceremonies: Haldi, Mehendi, Sangeet, Baraat, Auspicious Pheras, Muhurtham, Reception Gala">
+            <div className="mmm-marquee-track">
+              {[0, 1].map((copy) => (
+                <div key={copy} className="flex items-center shrink-0 gap-8 pr-8" aria-hidden={copy === 1}>
+                  {[
+                    { label: 'Haldi', clock: false },
+                    { label: 'Mehendi', clock: false },
+                    { label: 'Sangeet', clock: false },
+                    { label: 'Baraat', clock: false },
+                    { label: 'Auspicious Pheras', clock: false },
+                    { label: 'Muhurtham', clock: true },
+                    { label: 'Reception Gala', clock: false },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center gap-8 shrink-0">
+                      <div className="flex items-center space-x-2 shrink-0 whitespace-nowrap">
+                        {item.clock ? <Clock className="w-4 h-4 text-primary" /> : <Sparkles className="w-4 h-4 text-primary" />}
+                        <span className="font-serif text-lg font-semibold text-primary">{item.label}</span>
+                      </div>
+                      <span className="text-outline-variant text-sm shrink-0">✦</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
         </section>
