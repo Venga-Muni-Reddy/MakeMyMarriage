@@ -119,6 +119,8 @@ export class AuthSecurity {
       name: user.name,
       email: user.email,
       preferredLanguage: user.preferredLanguage,
+      avatarUrl: user.avatarUrl,
+      googleId: user.googleId,
       emailVerifiedAt: user.emailVerifiedAt,
       createdAt: user.createdAt,
     };

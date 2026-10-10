@@ -5,13 +5,17 @@ import { UserEntity } from './auth.types';
 export interface CreateUserData {
   name: string;
   email: string;
-  passwordHash: string;
+  passwordHash?: string | null;
+  googleId?: string | null;
+  avatarUrl?: string | null;
   preferredLanguage?: string;
+  emailVerifiedAt?: Date | null;
 }
 
 export interface IUserRepository {
   findByEmail(email: string): Promise<UserEntity | null>;
   findById(id: string): Promise<UserEntity | null>;
+  findByGoogleId(googleId: string): Promise<UserEntity | null>;
   create(data: CreateUserData): Promise<UserEntity>;
   update(id: string, data: Partial<UserEntity>): Promise<UserEntity | null>;
 }
@@ -43,6 +47,27 @@ export class UserRepository implements IUserRepository {
     return null;
   }
 
+  async findByGoogleId(googleId: string): Promise<UserEntity | null> {
+    try {
+      const user = await prisma.user.findFirst({
+        where: {
+          googleId,
+          deletedAt: null,
+        },
+      });
+      if (user) return user as UserEntity;
+    } catch (err: any) {
+      console.warn('[UserRepository] Prisma findByGoogleId failed, checking memory:', err?.message || err);
+      for (const user of UserRepository.memoryStore.values()) {
+        if (user.googleId === googleId && !user.deletedAt) {
+          return user;
+        }
+      }
+    }
+
+    return null;
+  }
+
   async findById(id: string): Promise<UserEntity | null> {
     try {
       const user = await prisma.user.findFirst({
@@ -66,8 +91,11 @@ export class UserRepository implements IUserRepository {
         data: {
           name: data.name.trim(),
           email: normalizedEmail,
-          passwordHash: data.passwordHash,
+          passwordHash: data.passwordHash || null,
+          googleId: data.googleId || null,
+          avatarUrl: data.avatarUrl || null,
           preferredLanguage: data.preferredLanguage || 'en',
+          emailVerifiedAt: data.emailVerifiedAt || null,
         },
       });
       return created as UserEntity;
@@ -78,9 +106,11 @@ export class UserRepository implements IUserRepository {
         id: crypto.randomUUID(),
         name: data.name.trim(),
         email: normalizedEmail,
-        passwordHash: data.passwordHash,
+        passwordHash: data.passwordHash || null,
+        googleId: data.googleId || null,
+        avatarUrl: data.avatarUrl || null,
         preferredLanguage: data.preferredLanguage || 'en',
-        emailVerifiedAt: null,
+        emailVerifiedAt: data.emailVerifiedAt || null,
         createdAt: now,
         updatedAt: now,
         deletedAt: null,
@@ -97,7 +127,9 @@ export class UserRepository implements IUserRepository {
         data: {
           ...(data.name && { name: data.name }),
           ...(data.preferredLanguage && { preferredLanguage: data.preferredLanguage }),
-          ...(data.passwordHash && { passwordHash: data.passwordHash }),
+          ...(data.passwordHash !== undefined && { passwordHash: data.passwordHash }),
+          ...(data.googleId !== undefined && { googleId: data.googleId }),
+          ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
           ...(data.emailVerifiedAt && { emailVerifiedAt: data.emailVerifiedAt }),
           ...(data.deletedAt && { deletedAt: data.deletedAt }),
         },

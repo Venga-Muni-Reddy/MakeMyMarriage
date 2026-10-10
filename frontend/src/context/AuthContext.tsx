@@ -7,6 +7,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (payload: LoginPayload) => Promise<User>;
   signup: (payload: SignupPayload) => Promise<User>;
+  loginWithGoogle: (credential: string) => Promise<User>;
   logout: () => Promise<void>;
 }
 
@@ -54,6 +55,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return res.data.user;
   };
 
+  const loginWithGoogle = async (credential: string) => {
+    const res = await authService.googleLogin(credential);
+    if (res.data?.token) {
+      localStorage.setItem('mmm_token', res.data.token);
+    }
+    setUser(res.data.user);
+    return res.data.user;
+  };
+
   const logout = async () => {
     try {
       await authService.logout();
@@ -71,6 +81,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!user,
         login,
         signup,
+        loginWithGoogle,
         logout,
       }}
     >

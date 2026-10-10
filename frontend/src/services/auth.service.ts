@@ -5,6 +5,7 @@ export interface User {
   name: string;
   email: string;
   preferredLanguage: string;
+  avatarUrl?: string | null;
 }
 
 export interface SignupPayload {
@@ -36,6 +37,10 @@ export const authService = {
 
   async login(payload: LoginPayload): Promise<AuthResponse> {
     return api.post('/auth/login', payload);
+  },
+
+  async googleLogin(credential: string): Promise<AuthResponse> {
+    return api.post('/auth/google', { credential });
   },
 
   async logout(): Promise<void> {

@@ -63,6 +63,36 @@ authRouter.post('/login', async (req: Request, res: Response, next: NextFunction
 
 /**
  * @openapi
+ * /api/v1/auth/google:
+ *   post:
+ *     summary: Authenticate or register with Google OAuth credential
+ *     tags: [Authentication]
+ */
+authRouter.post('/google', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { credential } = req.body;
+    const { user, token, maxAgeMs } = await authService.googleAuth(credential);
+
+    // Set secure HttpOnly session cookie
+    res.cookie('mmm_session', token, {
+      httpOnly: true,
+      secure: config.session.cookieSecure,
+      sameSite: config.session.cookieSecure ? 'none' : 'lax',
+      path: '/',
+      maxAge: maxAgeMs,
+    });
+
+    return ApiResponse.success(res, {
+      data: { user, token },
+      message: 'Google authentication successful',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
  * /api/v1/auth/logout:
  *   post:
  *     summary: Invalidate session and clear auth cookies

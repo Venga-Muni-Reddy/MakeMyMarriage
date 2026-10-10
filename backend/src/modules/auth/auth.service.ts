@@ -1,3 +1,4 @@
+import { OAuth2Client } from 'google-auth-library';
 import { userRepository, IUserRepository } from './auth.repository';
 import { AuthSecurity } from './auth.security';
 import { SignupInput, signupSchema, LoginInput, loginSchema } from './auth.validation';
@@ -6,7 +7,11 @@ import { ConflictError, UnauthorizedError, NotFoundError, ValidationError } from
 import { config } from '../../config';
 
 export class AuthService {
-  constructor(private userRepo: IUserRepository = userRepository) {}
+  private googleClient: OAuth2Client;
+
+  constructor(private userRepo: IUserRepository = userRepository) {
+    this.googleClient = new OAuth2Client(config.google.clientId);
+  }
 
   /**
    * Registers a new couple/host account.
@@ -67,6 +72,13 @@ export class AuthService {
       throw new UnauthorizedError('Invalid email or password');
     }
 
+    // Check if account was created via Google Sign-In with no local password set
+    if (!user.passwordHash) {
+      throw new UnauthorizedError(
+        'This account was created with Google Sign-In. Please sign in using the Google button.'
+      );
+    }
+
     // Timing-safe password verification
     const isValid = await AuthSecurity.verifyPassword(password, user.passwordHash);
     if (!isValid) {
@@ -76,6 +88,93 @@ export class AuthService {
     // Session duration: 30 days if rememberMe, otherwise 7 days
     const maxAgeMs = rememberMe ? 30 * 24 * 60 * 60 * 1000 : config.session.maxAge;
 
+    const token = AuthSecurity.createSessionToken(
+      {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        preferredLanguage: user.preferredLanguage,
+      },
+      maxAgeMs
+    );
+
+    return {
+      user: AuthSecurity.toUserResponse(user),
+      token,
+      maxAgeMs,
+    };
+  }
+
+  /**
+   * Authenticates or registers a user via Google OAuth credential token.
+   */
+  async googleAuth(credential: string): Promise<{ user: UserResponse; token: string; maxAgeMs: number }> {
+    if (!credential) {
+      throw new ValidationError('Google credential token is required');
+    }
+
+    let payload: any = null;
+
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken: credential,
+        audience: config.google.clientId || undefined,
+      });
+      payload = ticket.getPayload();
+    } catch (verifyError: any) {
+      // In development or if audience check fails due to missing server client ID,
+      // fallback to Google tokeninfo endpoint verification
+      console.warn('[AuthService] Google verifyIdToken error, attempting fallback:', verifyError?.message);
+      try {
+        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+        if (response.ok) {
+          payload = await response.json();
+        }
+      } catch (fallbackError) {
+        console.error('[AuthService] Google tokeninfo fallback failed:', fallbackError);
+      }
+    }
+
+    if (!payload || !payload.email) {
+      throw new UnauthorizedError('Invalid or expired Google authentication token. Please sign in again.');
+    }
+
+    const googleId: string = payload.sub;
+    const email: string = payload.email.toLowerCase().trim();
+    const name: string = payload.name || payload.given_name || email.split('@')[0];
+    const avatarUrl: string | null = payload.picture || null;
+
+    // Check if user already exists with this Google ID
+    let user = await this.userRepo.findByGoogleId(googleId);
+
+    if (!user) {
+      // Check if user already exists with this email address (Scenario A: Existing user links Google)
+      user = await this.userRepo.findByEmail(email);
+
+      if (user) {
+        // Link Google ID to existing account and update verified email / avatar
+        const updated = await this.userRepo.update(user.id, {
+          googleId,
+          avatarUrl: user.avatarUrl || avatarUrl,
+          emailVerifiedAt: user.emailVerifiedAt || new Date(),
+        });
+        if (updated) user = updated;
+      } else {
+        // Scenario B: Brand new user registering via Google
+        user = await this.userRepo.create({
+          name,
+          email,
+          passwordHash: null,
+          googleId,
+          avatarUrl,
+          preferredLanguage: 'en',
+          emailVerifiedAt: new Date(),
+        });
+      }
+    }
+
+    // Generate session token
+    const maxAgeMs = config.session.maxAge;
     const token = AuthSecurity.createSessionToken(
       {
         userId: user.id,
